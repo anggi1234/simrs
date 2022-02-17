@@ -1,0 +1,38 @@
+Pendaftaran
+- Daftar Rajal/IGD
+- List Pasien
+- Riwayat SEP
+- Laporan
+    - Sensus Harian
+    - Kunjungan Pasien Per Bulan
+
+Rawat Jalan
+- List Rajal/IGD
+- Laporan
+    - Register Pasien
+    - Register Cara Bayar
+    - Register Per Poli Harian
+    - Register Per Poli Bulanan
+    - Register Per Poli Tahunan
+    - Kedatangan Pasien
+    - Sensus Harian
+- Master 
+    - Dokter
+    - Master Tindakan TMNO
+    - Master Poli
+    - Master Keperawatan
+    - Master Tindakan Laborat
+    - Master Tindakan Radiologi
+    - Master Tindakan Operasi
+
+Rawat Inap
+- List Kunjungan Pasien
+- Ruang (Ruang List)
+    - Kasur
+- Laporan
+    - Pasien Rawat Inap
+- Master
+    - Master Tindakan
+    - Status Keluar
+
+

@@ -1,0 +1,4574 @@
+<?php
+
+namespace PHPMaker2021\SIMRSSQLSERVERRAJALALTER;
+
+use Doctrine\DBAL\ParameterType;
+
+/**
+ * Page class
+ */
+class VLaboratoriumList extends VLaboratorium
+{
+    use MessagesTrait;
+
+    // Page ID
+    public $PageID = "list";
+
+    // Project ID
+    public $ProjectID = PROJECT_ID;
+
+    // Table name
+    public $TableName = 'V_LABORATORIUM';
+
+    // Page object name
+    public $PageObjName = "VLaboratoriumList";
+
+    // Rendering View
+    public $RenderingView = false;
+
+    // Grid form hidden field names
+    public $FormName = "fV_LABORATORIUMlist";
+    public $FormActionName = "k_action";
+    public $FormBlankRowName = "k_blankrow";
+    public $FormKeyCountName = "key_count";
+
+    // Page URLs
+    public $AddUrl;
+    public $EditUrl;
+    public $CopyUrl;
+    public $DeleteUrl;
+    public $ViewUrl;
+    public $ListUrl;
+
+    // Export URLs
+    public $ExportPrintUrl;
+    public $ExportHtmlUrl;
+    public $ExportExcelUrl;
+    public $ExportWordUrl;
+    public $ExportXmlUrl;
+    public $ExportCsvUrl;
+    public $ExportPdfUrl;
+
+    // Custom export
+    public $ExportExcelCustom = false;
+    public $ExportWordCustom = false;
+    public $ExportPdfCustom = false;
+    public $ExportEmailCustom = false;
+
+    // Update URLs
+    public $InlineAddUrl;
+    public $InlineCopyUrl;
+    public $InlineEditUrl;
+    public $GridAddUrl;
+    public $GridEditUrl;
+    public $MultiDeleteUrl;
+    public $MultiUpdateUrl;
+
+    // Page headings
+    public $Heading = "";
+    public $Subheading = "";
+    public $PageHeader;
+    public $PageFooter;
+
+    // Page terminated
+    private $terminated = false;
+
+    // Page heading
+    public function pageHeading()
+    {
+        global $Language;
+        if ($this->Heading != "") {
+            return $this->Heading;
+        }
+        if (method_exists($this, "tableCaption")) {
+            return $this->tableCaption();
+        }
+        return "";
+    }
+
+    // Page subheading
+    public function pageSubheading()
+    {
+        global $Language;
+        if ($this->Subheading != "") {
+            return $this->Subheading;
+        }
+        if ($this->TableName) {
+            return $Language->phrase($this->PageID);
+        }
+        return "";
+    }
+
+    // Page name
+    public function pageName()
+    {
+        return CurrentPageName();
+    }
+
+    // Page URL
+    public function pageUrl()
+    {
+        $url = ScriptName() . "?";
+        if ($this->UseTokenInUrl) {
+            $url .= "t=" . $this->TableVar . "&"; // Add page token
+        }
+        return $url;
+    }
+
+    // Show Page Header
+    public function showPageHeader()
+    {
+        $header = $this->PageHeader;
+        $this->pageDataRendering($header);
+        if ($header != "") { // Header exists, display
+            echo '<p id="ew-page-header">' . $header . '</p>';
+        }
+    }
+
+    // Show Page Footer
+    public function showPageFooter()
+    {
+        $footer = $this->PageFooter;
+        $this->pageDataRendered($footer);
+        if ($footer != "") { // Footer exists, display
+            echo '<p id="ew-page-footer">' . $footer . '</p>';
+        }
+    }
+
+    // Validate page request
+    protected function isPageRequest()
+    {
+        global $CurrentForm;
+        if ($this->UseTokenInUrl) {
+            if ($CurrentForm) {
+                return ($this->TableVar == $CurrentForm->getValue("t"));
+            }
+            if (Get("t") !== null) {
+                return ($this->TableVar == Get("t"));
+            }
+        }
+        return true;
+    }
+
+    // Constructor
+    public function __construct()
+    {
+        global $Language, $DashboardReport, $DebugTimer;
+        global $UserTable;
+
+        // Initialize
+        $GLOBALS["Page"] = &$this;
+
+        // Language object
+        $Language = Container("language");
+
+        // Parent constuctor
+        parent::__construct();
+
+        // Table object (V_LABORATORIUM)
+        if (!isset($GLOBALS["V_LABORATORIUM"]) || get_class($GLOBALS["V_LABORATORIUM"]) == PROJECT_NAMESPACE . "V_LABORATORIUM") {
+            $GLOBALS["V_LABORATORIUM"] = &$this;
+        }
+
+        // Page URL
+        $pageUrl = $this->pageUrl();
+
+        // Initialize URLs
+        $this->ExportPrintUrl = $pageUrl . "export=print";
+        $this->ExportExcelUrl = $pageUrl . "export=excel";
+        $this->ExportWordUrl = $pageUrl . "export=word";
+        $this->ExportPdfUrl = $pageUrl . "export=pdf";
+        $this->ExportHtmlUrl = $pageUrl . "export=html";
+        $this->ExportXmlUrl = $pageUrl . "export=xml";
+        $this->ExportCsvUrl = $pageUrl . "export=csv";
+        $this->AddUrl = "VLaboratoriumAdd";
+        $this->InlineAddUrl = $pageUrl . "action=add";
+        $this->GridAddUrl = $pageUrl . "action=gridadd";
+        $this->GridEditUrl = $pageUrl . "action=gridedit";
+        $this->MultiDeleteUrl = "VLaboratoriumDelete";
+        $this->MultiUpdateUrl = "VLaboratoriumUpdate";
+
+        // Table name (for backward compatibility only)
+        if (!defined(PROJECT_NAMESPACE . "TABLE_NAME")) {
+            define(PROJECT_NAMESPACE . "TABLE_NAME", 'V_LABORATORIUM');
+        }
+
+        // Start timer
+        $DebugTimer = Container("timer");
+
+        // Debug message
+        LoadDebugMessage();
+
+        // Open connection
+        $GLOBALS["Conn"] = $GLOBALS["Conn"] ?? $this->getConnection();
+
+        // User table object
+        $UserTable = Container("usertable");
+
+        // List options
+        $this->ListOptions = new ListOptions();
+        $this->ListOptions->TableVar = $this->TableVar;
+
+        // Export options
+        $this->ExportOptions = new ListOptions("div");
+        $this->ExportOptions->TagClassName = "ew-export-option";
+
+        // Import options
+        $this->ImportOptions = new ListOptions("div");
+        $this->ImportOptions->TagClassName = "ew-import-option";
+
+        // Other options
+        if (!$this->OtherOptions) {
+            $this->OtherOptions = new ListOptionsArray();
+        }
+        $this->OtherOptions["addedit"] = new ListOptions("div");
+        $this->OtherOptions["addedit"]->TagClassName = "ew-add-edit-option";
+        $this->OtherOptions["detail"] = new ListOptions("div");
+        $this->OtherOptions["detail"]->TagClassName = "ew-detail-option";
+        $this->OtherOptions["action"] = new ListOptions("div");
+        $this->OtherOptions["action"]->TagClassName = "ew-action-option";
+
+        // Filter options
+        $this->FilterOptions = new ListOptions("div");
+        $this->FilterOptions->TagClassName = "ew-filter-option fV_LABORATORIUMlistsrch";
+
+        // List actions
+        $this->ListActions = new ListActions();
+    }
+
+    // Get content from stream
+    public function getContents($stream = null): string
+    {
+        global $Response;
+        return is_object($Response) ? $Response->getBody() : ob_get_clean();
+    }
+
+    // Is lookup
+    public function isLookup()
+    {
+        return SameText(Route(0), Config("API_LOOKUP_ACTION"));
+    }
+
+    // Is AutoFill
+    public function isAutoFill()
+    {
+        return $this->isLookup() && SameText(Post("ajax"), "autofill");
+    }
+
+    // Is AutoSuggest
+    public function isAutoSuggest()
+    {
+        return $this->isLookup() && SameText(Post("ajax"), "autosuggest");
+    }
+
+    // Is modal lookup
+    public function isModalLookup()
+    {
+        return $this->isLookup() && SameText(Post("ajax"), "modal");
+    }
+
+    // Is terminated
+    public function isTerminated()
+    {
+        return $this->terminated;
+    }
+
+    /**
+     * Terminate page
+     *
+     * @param string $url URL for direction
+     * @return void
+     */
+    public function terminate($url = "")
+    {
+        if ($this->terminated) {
+            return;
+        }
+        global $ExportFileName, $TempImages, $DashboardReport, $Response;
+
+        // Page is terminated
+        $this->terminated = true;
+
+         // Page Unload event
+        if (method_exists($this, "pageUnload")) {
+            $this->pageUnload();
+        }
+
+        // Global Page Unloaded event (in userfn*.php)
+        Page_Unloaded();
+
+        // Export
+        if ($this->CustomExport && $this->CustomExport == $this->Export && array_key_exists($this->CustomExport, Config("EXPORT_CLASSES"))) {
+            $content = $this->getContents();
+            if ($ExportFileName == "") {
+                $ExportFileName = $this->TableVar;
+            }
+            $class = PROJECT_NAMESPACE . Config("EXPORT_CLASSES." . $this->CustomExport);
+            if (class_exists($class)) {
+                $doc = new $class(Container("V_LABORATORIUM"));
+                $doc->Text = @$content;
+                if ($this->isExport("email")) {
+                    echo $this->exportEmail($doc->Text);
+                } else {
+                    $doc->export();
+                }
+                DeleteTempImages(); // Delete temp images
+                return;
+            }
+        }
+        if (!IsApi() && method_exists($this, "pageRedirecting")) {
+            $this->pageRedirecting($url);
+        }
+
+        // Close connection
+        CloseConnections();
+
+        // Return for API
+        if (IsApi()) {
+            $res = $url === true;
+            if (!$res) { // Show error
+                WriteJson(array_merge(["success" => false], $this->getMessages()));
+            }
+            return;
+        } else { // Check if response is JSON
+            if (StartsString("application/json", $Response->getHeaderLine("Content-type")) && $Response->getBody()->getSize()) { // With JSON response
+                $this->clearMessages();
+                return;
+            }
+        }
+
+        // Go to URL if specified
+        if ($url != "") {
+            if (!Config("DEBUG") && ob_get_length()) {
+                ob_end_clean();
+            }
+            SaveDebugMessage();
+            Redirect(GetUrl($url));
+        }
+        return; // Return to controller
+    }
+
+    // Get records from recordset
+    protected function getRecordsFromRecordset($rs, $current = false)
+    {
+        $rows = [];
+        if (is_object($rs)) { // Recordset
+            while ($rs && !$rs->EOF) {
+                $this->loadRowValues($rs); // Set up DbValue/CurrentValue
+                $row = $this->getRecordFromArray($rs->fields);
+                if ($current) {
+                    return $row;
+                } else {
+                    $rows[] = $row;
+                }
+                $rs->moveNext();
+            }
+        } elseif (is_array($rs)) {
+            foreach ($rs as $ar) {
+                $row = $this->getRecordFromArray($ar);
+                if ($current) {
+                    return $row;
+                } else {
+                    $rows[] = $row;
+                }
+            }
+        }
+        return $rows;
+    }
+
+    // Get record from array
+    protected function getRecordFromArray($ar)
+    {
+        $row = [];
+        if (is_array($ar)) {
+            foreach ($ar as $fldname => $val) {
+                if (array_key_exists($fldname, $this->Fields) && ($this->Fields[$fldname]->Visible || $this->Fields[$fldname]->IsPrimaryKey)) { // Primary key or Visible
+                    $fld = &$this->Fields[$fldname];
+                    if ($fld->HtmlTag == "FILE") { // Upload field
+                        if (EmptyValue($val)) {
+                            $row[$fldname] = null;
+                        } else {
+                            if ($fld->DataType == DATATYPE_BLOB) {
+                                $url = FullUrl(GetApiUrl(Config("API_FILE_ACTION") .
+                                    "/" . $fld->TableVar . "/" . $fld->Param . "/" . rawurlencode($this->getRecordKeyValue($ar))));
+                                $row[$fldname] = ["type" => ContentType($val), "url" => $url, "name" => $fld->Param . ContentExtension($val)];
+                            } elseif (!$fld->UploadMultiple || !ContainsString($val, Config("MULTIPLE_UPLOAD_SEPARATOR"))) { // Single file
+                                $url = FullUrl(GetApiUrl(Config("API_FILE_ACTION") .
+                                    "/" . $fld->TableVar . "/" . Encrypt($fld->physicalUploadPath() . $val)));
+                                $row[$fldname] = ["type" => MimeContentType($val), "url" => $url, "name" => $val];
+                            } else { // Multiple files
+                                $files = explode(Config("MULTIPLE_UPLOAD_SEPARATOR"), $val);
+                                $ar = [];
+                                foreach ($files as $file) {
+                                    $url = FullUrl(GetApiUrl(Config("API_FILE_ACTION") .
+                                        "/" . $fld->TableVar . "/" . Encrypt($fld->physicalUploadPath() . $file)));
+                                    if (!EmptyValue($file)) {
+                                        $ar[] = ["type" => MimeContentType($file), "url" => $url, "name" => $file];
+                                    }
+                                }
+                                $row[$fldname] = $ar;
+                            }
+                        }
+                    } else {
+                        if ($fld->DataType == DATATYPE_MEMO && $fld->MemoMaxLength > 0) {
+                            $val = TruncateMemo($val, $fld->MemoMaxLength, $fld->TruncateMemoRemoveHtml);
+                        }
+                        $row[$fldname] = $val;
+                    }
+                }
+            }
+        }
+        return $row;
+    }
+
+    // Get record key value from array
+    protected function getRecordKeyValue($ar)
+    {
+        $key = "";
+        if (is_array($ar)) {
+            $key .= @$ar['IDXDAFTAR'];
+        }
+        return $key;
+    }
+
+    /**
+     * Hide fields for add/edit
+     *
+     * @return void
+     */
+    protected function hideFieldsForAddEdit()
+    {
+        if ($this->isAdd() || $this->isCopy() || $this->isGridAdd()) {
+            $this->IDXDAFTAR->Visible = false;
+        }
+    }
+
+    // Lookup data
+    public function lookup()
+    {
+        global $Language, $Security;
+
+        // Get lookup object
+        $fieldName = Post("field");
+        $lookup = $this->Fields[$fieldName]->Lookup;
+
+        // Get lookup parameters
+        $lookupType = Post("ajax", "unknown");
+        $pageSize = -1;
+        $offset = -1;
+        $searchValue = "";
+        if (SameText($lookupType, "modal")) {
+            $searchValue = Post("sv", "");
+            $pageSize = Post("recperpage", 10);
+            $offset = Post("start", 0);
+        } elseif (SameText($lookupType, "autosuggest")) {
+            $searchValue = Param("q", "");
+            $pageSize = Param("n", -1);
+            $pageSize = is_numeric($pageSize) ? (int)$pageSize : -1;
+            if ($pageSize <= 0) {
+                $pageSize = Config("AUTO_SUGGEST_MAX_ENTRIES");
+            }
+            $start = Param("start", -1);
+            $start = is_numeric($start) ? (int)$start : -1;
+            $page = Param("page", -1);
+            $page = is_numeric($page) ? (int)$page : -1;
+            $offset = $start >= 0 ? $start : ($page > 0 && $pageSize > 0 ? ($page - 1) * $pageSize : 0);
+        }
+        $userSelect = Decrypt(Post("s", ""));
+        $userFilter = Decrypt(Post("f", ""));
+        $userOrderBy = Decrypt(Post("o", ""));
+        $keys = Post("keys");
+        $lookup->LookupType = $lookupType; // Lookup type
+        if ($keys !== null) { // Selected records from modal
+            if (is_array($keys)) {
+                $keys = implode(Config("MULTIPLE_OPTION_SEPARATOR"), $keys);
+            }
+            $lookup->FilterFields = []; // Skip parent fields if any
+            $lookup->FilterValues[] = $keys; // Lookup values
+            $pageSize = -1; // Show all records
+        } else { // Lookup values
+            $lookup->FilterValues[] = Post("v0", Post("lookupValue", ""));
+        }
+        $cnt = is_array($lookup->FilterFields) ? count($lookup->FilterFields) : 0;
+        for ($i = 1; $i <= $cnt; $i++) {
+            $lookup->FilterValues[] = Post("v" . $i, "");
+        }
+        $lookup->SearchValue = $searchValue;
+        $lookup->PageSize = $pageSize;
+        $lookup->Offset = $offset;
+        if ($userSelect != "") {
+            $lookup->UserSelect = $userSelect;
+        }
+        if ($userFilter != "") {
+            $lookup->UserFilter = $userFilter;
+        }
+        if ($userOrderBy != "") {
+            $lookup->UserOrderBy = $userOrderBy;
+        }
+        $lookup->toJson($this); // Use settings from current page
+    }
+
+    // Class variables
+    public $ListOptions; // List options
+    public $ExportOptions; // Export options
+    public $SearchOptions; // Search options
+    public $OtherOptions; // Other options
+    public $FilterOptions; // Filter options
+    public $ImportOptions; // Import options
+    public $ListActions; // List actions
+    public $SelectedCount = 0;
+    public $SelectedIndex = 0;
+    public $DisplayRecords = 10;
+    public $StartRecord;
+    public $StopRecord;
+    public $TotalRecords = 0;
+    public $RecordRange = 10;
+    public $PageSizes = "10,20,50,-1"; // Page sizes (comma separated)
+    public $DefaultSearchWhere = ""; // Default search WHERE clause
+    public $SearchWhere = ""; // Search WHERE clause
+    public $SearchPanelClass = "ew-search-panel collapse show"; // Search Panel class
+    public $SearchRowCount = 0; // For extended search
+    public $SearchColumnCount = 0; // For extended search
+    public $SearchFieldsPerRow = 1; // For extended search
+    public $RecordCount = 0; // Record count
+    public $EditRowCount;
+    public $StartRowCount = 1;
+    public $RowCount = 0;
+    public $Attrs = []; // Row attributes and cell attributes
+    public $RowIndex = 0; // Row index
+    public $KeyCount = 0; // Key count
+    public $RowAction = ""; // Row action
+    public $MultiColumnClass = "col-sm";
+    public $MultiColumnEditClass = "w-100";
+    public $DbMasterFilter = ""; // Master filter
+    public $DbDetailFilter = ""; // Detail filter
+    public $MasterRecordExists;
+    public $MultiSelectKey;
+    public $Command;
+    public $RestoreSearch = false;
+    public $HashValue; // Hash value
+    public $DetailPages;
+    public $OldRecordset;
+
+    /**
+     * Page run
+     *
+     * @return void
+     */
+    public function run()
+    {
+        global $ExportType, $CustomExportType, $ExportFileName, $UserProfile, $Language, $Security, $CurrentForm;
+        $this->CurrentAction = Param("action"); // Set up current action
+
+        // Get grid add count
+        $gridaddcnt = Get(Config("TABLE_GRID_ADD_ROW_COUNT"), "");
+        if (is_numeric($gridaddcnt) && $gridaddcnt > 0) {
+            $this->GridAddRowCount = $gridaddcnt;
+        }
+
+        // Set up list options
+        $this->setupListOptions();
+        $this->ORG_UNIT_CODE->setVisibility();
+        $this->NO_REGISTRATION->setVisibility();
+        $this->VISIT_ID->setVisibility();
+        $this->STATUS_PASIEN_ID->setVisibility();
+        $this->RUJUKAN_ID->setVisibility();
+        $this->ADDRESS_OF_RUJUKAN->setVisibility();
+        $this->REASON_ID->setVisibility();
+        $this->WAY_ID->setVisibility();
+        $this->PATIENT_CATEGORY_ID->setVisibility();
+        $this->BOOKED_DATE->setVisibility();
+        $this->VISIT_DATE->setVisibility();
+        $this->ISNEW->setVisibility();
+        $this->FOLLOW_UP->setVisibility();
+        $this->PLACE_TYPE->setVisibility();
+        $this->CLINIC_ID->setVisibility();
+        $this->CLINIC_ID_FROM->setVisibility();
+        $this->CLASS_ROOM_ID->setVisibility();
+        $this->BED_ID->setVisibility();
+        $this->KELUAR_ID->setVisibility();
+        $this->IN_DATE->setVisibility();
+        $this->EXIT_DATE->setVisibility();
+        $this->DIANTAR_OLEH->setVisibility();
+        $this->GENDER->setVisibility();
+        $this->DESCRIPTION->setVisibility();
+        $this->VISITOR_ADDRESS->setVisibility();
+        $this->MODIFIED_BY->setVisibility();
+        $this->MODIFIED_DATE->setVisibility();
+        $this->MODIFIED_FROM->setVisibility();
+        $this->EMPLOYEE_ID->setVisibility();
+        $this->EMPLOYEE_ID_FROM->setVisibility();
+        $this->RESPONSIBLE_ID->setVisibility();
+        $this->RESPONSIBLE->setVisibility();
+        $this->FAMILY_STATUS_ID->setVisibility();
+        $this->TICKET_NO->setVisibility();
+        $this->ISATTENDED->setVisibility();
+        $this->PAYOR_ID->setVisibility();
+        $this->CLASS_ID->setVisibility();
+        $this->ISPERTARIF->setVisibility();
+        $this->KAL_ID->setVisibility();
+        $this->EMPLOYEE_INAP->setVisibility();
+        $this->PASIEN_ID->setVisibility();
+        $this->KARYAWAN->setVisibility();
+        $this->ACCOUNT_ID->setVisibility();
+        $this->CLASS_ID_PLAFOND->setVisibility();
+        $this->BACKCHARGE->setVisibility();
+        $this->COVERAGE_ID->setVisibility();
+        $this->AGEYEAR->setVisibility();
+        $this->AGEMONTH->setVisibility();
+        $this->AGEDAY->setVisibility();
+        $this->RECOMENDATION->setVisibility();
+        $this->CONCLUSION->setVisibility();
+        $this->SPECIMENNO->setVisibility();
+        $this->LOCKED->setVisibility();
+        $this->RM_OUT_DATE->setVisibility();
+        $this->RM_IN_DATE->setVisibility();
+        $this->LAMA_PINJAM->setVisibility();
+        $this->STANDAR_RJ->setVisibility();
+        $this->LENGKAP_RJ->setVisibility();
+        $this->LENGKAP_RI->setVisibility();
+        $this->RESEND_RM_DATE->setVisibility();
+        $this->LENGKAP_RM1->setVisibility();
+        $this->LENGKAP_RESUME->setVisibility();
+        $this->LENGKAP_ANAMNESIS->setVisibility();
+        $this->LENGKAP_CONSENT->setVisibility();
+        $this->LENGKAP_ANESTESI->setVisibility();
+        $this->LENGKAP_OP->setVisibility();
+        $this->BACK_RM_DATE->setVisibility();
+        $this->VALID_RM_DATE->setVisibility();
+        $this->NO_SKP->setVisibility();
+        $this->NO_SKPINAP->setVisibility();
+        $this->DIAGNOSA_ID->setVisibility();
+        $this->ticket_all->setVisibility();
+        $this->tanggal_rujukan->setVisibility();
+        $this->ISRJ->setVisibility();
+        $this->NORUJUKAN->setVisibility();
+        $this->PPKRUJUKAN->setVisibility();
+        $this->LOKASILAKA->setVisibility();
+        $this->KDPOLI->setVisibility();
+        $this->EDIT_SEP->setVisibility();
+        $this->DELETE_SEP->setVisibility();
+        $this->KODE_AGAMA->setVisibility();
+        $this->DIAG_AWAL->setVisibility();
+        $this->AKTIF->setVisibility();
+        $this->BILL_INAP->setVisibility();
+        $this->SEP_PRINTDATE->setVisibility();
+        $this->MAPPING_SEP->setVisibility();
+        $this->TRANS_ID->setVisibility();
+        $this->KDPOLI_EKS->setVisibility();
+        $this->COB->setVisibility();
+        $this->PENJAMIN->setVisibility();
+        $this->ASALRUJUKAN->setVisibility();
+        $this->RESPONSEP->setVisibility();
+        $this->APPROVAL_DESC->setVisibility();
+        $this->APPROVAL_RESPONAJUKAN->setVisibility();
+        $this->APPROVAL_RESPONAPPROV->setVisibility();
+        $this->RESPONTGLPLG_DESC->setVisibility();
+        $this->RESPONPOST_VKLAIM->setVisibility();
+        $this->RESPONPUT_VKLAIM->setVisibility();
+        $this->RESPONDEL_VKLAIM->setVisibility();
+        $this->CALL_TIMES->setVisibility();
+        $this->CALL_DATE->setVisibility();
+        $this->CALL_DATES->setVisibility();
+        $this->SERVED_DATE->setVisibility();
+        $this->SERVED_INAP->setVisibility();
+        $this->KDDPJP1->setVisibility();
+        $this->KDDPJP->setVisibility();
+        $this->IDXDAFTAR->setVisibility();
+        $this->tgl_kontrol->setVisibility();
+        $this->hideFieldsForAddEdit();
+
+        // Global Page Loading event (in userfn*.php)
+        Page_Loading();
+
+        // Page Load event
+        if (method_exists($this, "pageLoad")) {
+            $this->pageLoad();
+        }
+
+        // Setup other options
+        $this->setupOtherOptions();
+
+        // Set up custom action (compatible with old version)
+        foreach ($this->CustomActions as $name => $action) {
+            $this->ListActions->add($name, $action);
+        }
+
+        // Show checkbox column if multiple action
+        foreach ($this->ListActions->Items as $listaction) {
+            if ($listaction->Select == ACTION_MULTIPLE && $listaction->Allow) {
+                $this->ListOptions["checkbox"]->Visible = true;
+                break;
+            }
+        }
+
+        // Set up lookup cache
+
+        // Search filters
+        $srchAdvanced = ""; // Advanced search filter
+        $srchBasic = ""; // Basic search filter
+        $filter = "";
+
+        // Get command
+        $this->Command = strtolower(Get("cmd"));
+        if ($this->isPageRequest()) {
+            // Process list action first
+            if ($this->processListAction()) { // Ajax request
+                $this->terminate();
+                return;
+            }
+
+            // Set up records per page
+            $this->setupDisplayRecords();
+
+            // Handle reset command
+            $this->resetCmd();
+
+            // Set up Breadcrumb
+            if (!$this->isExport()) {
+                $this->setupBreadcrumb();
+            }
+
+            // Hide list options
+            if ($this->isExport()) {
+                $this->ListOptions->hideAllOptions(["sequence"]);
+                $this->ListOptions->UseDropDownButton = false; // Disable drop down button
+                $this->ListOptions->UseButtonGroup = false; // Disable button group
+            } elseif ($this->isGridAdd() || $this->isGridEdit()) {
+                $this->ListOptions->hideAllOptions();
+                $this->ListOptions->UseDropDownButton = false; // Disable drop down button
+                $this->ListOptions->UseButtonGroup = false; // Disable button group
+            }
+
+            // Hide options
+            if ($this->isExport() || $this->CurrentAction) {
+                $this->ExportOptions->hideAllOptions();
+                $this->FilterOptions->hideAllOptions();
+                $this->ImportOptions->hideAllOptions();
+            }
+
+            // Hide other options
+            if ($this->isExport()) {
+                $this->OtherOptions->hideAllOptions();
+            }
+
+            // Get default search criteria
+            AddFilter($this->DefaultSearchWhere, $this->basicSearchWhere(true));
+
+            // Get basic search values
+            $this->loadBasicSearchValues();
+
+            // Process filter list
+            if ($this->processFilterList()) {
+                $this->terminate();
+                return;
+            }
+
+            // Restore search parms from Session if not searching / reset / export
+            if (($this->isExport() || $this->Command != "search" && $this->Command != "reset" && $this->Command != "resetall") && $this->Command != "json" && $this->checkSearchParms()) {
+                $this->restoreSearchParms();
+            }
+
+            // Call Recordset SearchValidated event
+            $this->recordsetSearchValidated();
+
+            // Set up sorting order
+            $this->setupSortOrder();
+
+            // Get basic search criteria
+            if (!$this->hasInvalidFields()) {
+                $srchBasic = $this->basicSearchWhere();
+            }
+        }
+
+        // Restore display records
+        if ($this->Command != "json" && $this->getRecordsPerPage() != "") {
+            $this->DisplayRecords = $this->getRecordsPerPage(); // Restore from Session
+        } else {
+            $this->DisplayRecords = 10; // Load default
+            $this->setRecordsPerPage($this->DisplayRecords); // Save default to Session
+        }
+
+        // Load Sorting Order
+        if ($this->Command != "json") {
+            $this->loadSortOrder();
+        }
+
+        // Load search default if no existing search criteria
+        if (!$this->checkSearchParms()) {
+            // Load basic search from default
+            $this->BasicSearch->loadDefault();
+            if ($this->BasicSearch->Keyword != "") {
+                $srchBasic = $this->basicSearchWhere();
+            }
+        }
+
+        // Build search criteria
+        AddFilter($this->SearchWhere, $srchAdvanced);
+        AddFilter($this->SearchWhere, $srchBasic);
+
+        // Call Recordset_Searching event
+        $this->recordsetSearching($this->SearchWhere);
+
+        // Save search criteria
+        if ($this->Command == "search" && !$this->RestoreSearch) {
+            $this->setSearchWhere($this->SearchWhere); // Save to Session
+            $this->StartRecord = 1; // Reset start record counter
+            $this->setStartRecordNumber($this->StartRecord);
+        } elseif ($this->Command != "json") {
+            $this->SearchWhere = $this->getSearchWhere();
+        }
+
+        // Build filter
+        $filter = "";
+        if (!$Security->canList()) {
+            $filter = "(0=1)"; // Filter all records
+        }
+        AddFilter($filter, $this->DbDetailFilter);
+        AddFilter($filter, $this->SearchWhere);
+
+        // Set up filter
+        if ($this->Command == "json") {
+            $this->UseSessionForListSql = false; // Do not use session for ListSQL
+            $this->CurrentFilter = $filter;
+        } else {
+            $this->setSessionWhere($filter);
+            $this->CurrentFilter = "";
+        }
+        if ($this->isGridAdd()) {
+            $this->CurrentFilter = "0=1";
+            $this->StartRecord = 1;
+            $this->DisplayRecords = $this->GridAddRowCount;
+            $this->TotalRecords = $this->DisplayRecords;
+            $this->StopRecord = $this->DisplayRecords;
+        } else {
+            $this->TotalRecords = $this->listRecordCount();
+            $this->StartRecord = 1;
+            if ($this->DisplayRecords <= 0 || ($this->isExport() && $this->ExportAll)) { // Display all records
+                $this->DisplayRecords = $this->TotalRecords;
+            }
+            if (!($this->isExport() && $this->ExportAll)) { // Set up start record position
+                $this->setupStartRecord();
+            }
+            $this->Recordset = $this->loadRecordset($this->StartRecord - 1, $this->DisplayRecords);
+
+            // Set no record found message
+            if (!$this->CurrentAction && $this->TotalRecords == 0) {
+                if (!$Security->canList()) {
+                    $this->setWarningMessage(DeniedMessage());
+                }
+                if ($this->SearchWhere == "0=101") {
+                    $this->setWarningMessage($Language->phrase("EnterSearchCriteria"));
+                } else {
+                    $this->setWarningMessage($Language->phrase("NoRecord"));
+                }
+            }
+        }
+
+        // Search options
+        $this->setupSearchOptions();
+
+        // Set up search panel class
+        if ($this->SearchWhere != "") {
+            AppendClass($this->SearchPanelClass, "show");
+        }
+
+        // Normal return
+        if (IsApi()) {
+            $rows = $this->getRecordsFromRecordset($this->Recordset);
+            $this->Recordset->close();
+            WriteJson(["success" => true, $this->TableVar => $rows, "totalRecordCount" => $this->TotalRecords]);
+            $this->terminate(true);
+            return;
+        }
+
+        // Set up pager
+        $this->Pager = new PrevNextPager($this->StartRecord, $this->getRecordsPerPage(), $this->TotalRecords, $this->PageSizes, $this->RecordRange, $this->AutoHidePager, $this->AutoHidePageSizeSelector);
+
+        // Set LoginStatus / Page_Rendering / Page_Render
+        if (!IsApi() && !$this->isTerminated()) {
+            // Pass table and field properties to client side
+            $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
+
+            // Setup login status
+            SetupLoginStatus();
+
+            // Pass login status to client side
+            SetClientVar("login", LoginStatus());
+
+            // Global Page Rendering event (in userfn*.php)
+            Page_Rendering();
+
+            // Page Render event
+            if (method_exists($this, "pageRender")) {
+                $this->pageRender();
+            }
+        }
+    }
+
+    // Set up number of records displayed per page
+    protected function setupDisplayRecords()
+    {
+        $wrk = Get(Config("TABLE_REC_PER_PAGE"), "");
+        if ($wrk != "") {
+            if (is_numeric($wrk)) {
+                $this->DisplayRecords = (int)$wrk;
+            } else {
+                if (SameText($wrk, "all")) { // Display all records
+                    $this->DisplayRecords = -1;
+                } else {
+                    $this->DisplayRecords = 10; // Non-numeric, load default
+                }
+            }
+            $this->setRecordsPerPage($this->DisplayRecords); // Save to Session
+            // Reset start position
+            $this->StartRecord = 1;
+            $this->setStartRecordNumber($this->StartRecord);
+        }
+    }
+
+    // Build filter for all keys
+    protected function buildKeyFilter()
+    {
+        global $CurrentForm;
+        $wrkFilter = "";
+
+        // Update row index and get row key
+        $rowindex = 1;
+        $CurrentForm->Index = $rowindex;
+        $thisKey = strval($CurrentForm->getValue($this->OldKeyName));
+        while ($thisKey != "") {
+            $this->setKey($thisKey);
+            if ($this->OldKey != "") {
+                $filter = $this->getRecordFilter();
+                if ($wrkFilter != "") {
+                    $wrkFilter .= " OR ";
+                }
+                $wrkFilter .= $filter;
+            } else {
+                $wrkFilter = "0=1";
+                break;
+            }
+
+            // Update row index and get row key
+            $rowindex++; // Next row
+            $CurrentForm->Index = $rowindex;
+            $thisKey = strval($CurrentForm->getValue($this->OldKeyName));
+        }
+        return $wrkFilter;
+    }
+
+    // Get list of filters
+    public function getFilterList()
+    {
+        global $UserProfile;
+
+        // Initialize
+        $filterList = "";
+        $savedFilterList = "";
+        $filterList = Concat($filterList, $this->ORG_UNIT_CODE->AdvancedSearch->toJson(), ","); // Field ORG_UNIT_CODE
+        $filterList = Concat($filterList, $this->NO_REGISTRATION->AdvancedSearch->toJson(), ","); // Field NO_REGISTRATION
+        $filterList = Concat($filterList, $this->VISIT_ID->AdvancedSearch->toJson(), ","); // Field VISIT_ID
+        $filterList = Concat($filterList, $this->STATUS_PASIEN_ID->AdvancedSearch->toJson(), ","); // Field STATUS_PASIEN_ID
+        $filterList = Concat($filterList, $this->RUJUKAN_ID->AdvancedSearch->toJson(), ","); // Field RUJUKAN_ID
+        $filterList = Concat($filterList, $this->ADDRESS_OF_RUJUKAN->AdvancedSearch->toJson(), ","); // Field ADDRESS_OF_RUJUKAN
+        $filterList = Concat($filterList, $this->REASON_ID->AdvancedSearch->toJson(), ","); // Field REASON_ID
+        $filterList = Concat($filterList, $this->WAY_ID->AdvancedSearch->toJson(), ","); // Field WAY_ID
+        $filterList = Concat($filterList, $this->PATIENT_CATEGORY_ID->AdvancedSearch->toJson(), ","); // Field PATIENT_CATEGORY_ID
+        $filterList = Concat($filterList, $this->BOOKED_DATE->AdvancedSearch->toJson(), ","); // Field BOOKED_DATE
+        $filterList = Concat($filterList, $this->VISIT_DATE->AdvancedSearch->toJson(), ","); // Field VISIT_DATE
+        $filterList = Concat($filterList, $this->ISNEW->AdvancedSearch->toJson(), ","); // Field ISNEW
+        $filterList = Concat($filterList, $this->FOLLOW_UP->AdvancedSearch->toJson(), ","); // Field FOLLOW_UP
+        $filterList = Concat($filterList, $this->PLACE_TYPE->AdvancedSearch->toJson(), ","); // Field PLACE_TYPE
+        $filterList = Concat($filterList, $this->CLINIC_ID->AdvancedSearch->toJson(), ","); // Field CLINIC_ID
+        $filterList = Concat($filterList, $this->CLINIC_ID_FROM->AdvancedSearch->toJson(), ","); // Field CLINIC_ID_FROM
+        $filterList = Concat($filterList, $this->CLASS_ROOM_ID->AdvancedSearch->toJson(), ","); // Field CLASS_ROOM_ID
+        $filterList = Concat($filterList, $this->BED_ID->AdvancedSearch->toJson(), ","); // Field BED_ID
+        $filterList = Concat($filterList, $this->KELUAR_ID->AdvancedSearch->toJson(), ","); // Field KELUAR_ID
+        $filterList = Concat($filterList, $this->IN_DATE->AdvancedSearch->toJson(), ","); // Field IN_DATE
+        $filterList = Concat($filterList, $this->EXIT_DATE->AdvancedSearch->toJson(), ","); // Field EXIT_DATE
+        $filterList = Concat($filterList, $this->DIANTAR_OLEH->AdvancedSearch->toJson(), ","); // Field DIANTAR_OLEH
+        $filterList = Concat($filterList, $this->GENDER->AdvancedSearch->toJson(), ","); // Field GENDER
+        $filterList = Concat($filterList, $this->DESCRIPTION->AdvancedSearch->toJson(), ","); // Field DESCRIPTION
+        $filterList = Concat($filterList, $this->VISITOR_ADDRESS->AdvancedSearch->toJson(), ","); // Field VISITOR_ADDRESS
+        $filterList = Concat($filterList, $this->MODIFIED_BY->AdvancedSearch->toJson(), ","); // Field MODIFIED_BY
+        $filterList = Concat($filterList, $this->MODIFIED_DATE->AdvancedSearch->toJson(), ","); // Field MODIFIED_DATE
+        $filterList = Concat($filterList, $this->MODIFIED_FROM->AdvancedSearch->toJson(), ","); // Field MODIFIED_FROM
+        $filterList = Concat($filterList, $this->EMPLOYEE_ID->AdvancedSearch->toJson(), ","); // Field EMPLOYEE_ID
+        $filterList = Concat($filterList, $this->EMPLOYEE_ID_FROM->AdvancedSearch->toJson(), ","); // Field EMPLOYEE_ID_FROM
+        $filterList = Concat($filterList, $this->RESPONSIBLE_ID->AdvancedSearch->toJson(), ","); // Field RESPONSIBLE_ID
+        $filterList = Concat($filterList, $this->RESPONSIBLE->AdvancedSearch->toJson(), ","); // Field RESPONSIBLE
+        $filterList = Concat($filterList, $this->FAMILY_STATUS_ID->AdvancedSearch->toJson(), ","); // Field FAMILY_STATUS_ID
+        $filterList = Concat($filterList, $this->TICKET_NO->AdvancedSearch->toJson(), ","); // Field TICKET_NO
+        $filterList = Concat($filterList, $this->ISATTENDED->AdvancedSearch->toJson(), ","); // Field ISATTENDED
+        $filterList = Concat($filterList, $this->PAYOR_ID->AdvancedSearch->toJson(), ","); // Field PAYOR_ID
+        $filterList = Concat($filterList, $this->CLASS_ID->AdvancedSearch->toJson(), ","); // Field CLASS_ID
+        $filterList = Concat($filterList, $this->ISPERTARIF->AdvancedSearch->toJson(), ","); // Field ISPERTARIF
+        $filterList = Concat($filterList, $this->KAL_ID->AdvancedSearch->toJson(), ","); // Field KAL_ID
+        $filterList = Concat($filterList, $this->EMPLOYEE_INAP->AdvancedSearch->toJson(), ","); // Field EMPLOYEE_INAP
+        $filterList = Concat($filterList, $this->PASIEN_ID->AdvancedSearch->toJson(), ","); // Field PASIEN_ID
+        $filterList = Concat($filterList, $this->KARYAWAN->AdvancedSearch->toJson(), ","); // Field KARYAWAN
+        $filterList = Concat($filterList, $this->ACCOUNT_ID->AdvancedSearch->toJson(), ","); // Field ACCOUNT_ID
+        $filterList = Concat($filterList, $this->CLASS_ID_PLAFOND->AdvancedSearch->toJson(), ","); // Field CLASS_ID_PLAFOND
+        $filterList = Concat($filterList, $this->BACKCHARGE->AdvancedSearch->toJson(), ","); // Field BACKCHARGE
+        $filterList = Concat($filterList, $this->COVERAGE_ID->AdvancedSearch->toJson(), ","); // Field COVERAGE_ID
+        $filterList = Concat($filterList, $this->AGEYEAR->AdvancedSearch->toJson(), ","); // Field AGEYEAR
+        $filterList = Concat($filterList, $this->AGEMONTH->AdvancedSearch->toJson(), ","); // Field AGEMONTH
+        $filterList = Concat($filterList, $this->AGEDAY->AdvancedSearch->toJson(), ","); // Field AGEDAY
+        $filterList = Concat($filterList, $this->RECOMENDATION->AdvancedSearch->toJson(), ","); // Field RECOMENDATION
+        $filterList = Concat($filterList, $this->CONCLUSION->AdvancedSearch->toJson(), ","); // Field CONCLUSION
+        $filterList = Concat($filterList, $this->SPECIMENNO->AdvancedSearch->toJson(), ","); // Field SPECIMENNO
+        $filterList = Concat($filterList, $this->LOCKED->AdvancedSearch->toJson(), ","); // Field LOCKED
+        $filterList = Concat($filterList, $this->RM_OUT_DATE->AdvancedSearch->toJson(), ","); // Field RM_OUT_DATE
+        $filterList = Concat($filterList, $this->RM_IN_DATE->AdvancedSearch->toJson(), ","); // Field RM_IN_DATE
+        $filterList = Concat($filterList, $this->LAMA_PINJAM->AdvancedSearch->toJson(), ","); // Field LAMA_PINJAM
+        $filterList = Concat($filterList, $this->STANDAR_RJ->AdvancedSearch->toJson(), ","); // Field STANDAR_RJ
+        $filterList = Concat($filterList, $this->LENGKAP_RJ->AdvancedSearch->toJson(), ","); // Field LENGKAP_RJ
+        $filterList = Concat($filterList, $this->LENGKAP_RI->AdvancedSearch->toJson(), ","); // Field LENGKAP_RI
+        $filterList = Concat($filterList, $this->RESEND_RM_DATE->AdvancedSearch->toJson(), ","); // Field RESEND_RM_DATE
+        $filterList = Concat($filterList, $this->LENGKAP_RM1->AdvancedSearch->toJson(), ","); // Field LENGKAP_RM1
+        $filterList = Concat($filterList, $this->LENGKAP_RESUME->AdvancedSearch->toJson(), ","); // Field LENGKAP_RESUME
+        $filterList = Concat($filterList, $this->LENGKAP_ANAMNESIS->AdvancedSearch->toJson(), ","); // Field LENGKAP_ANAMNESIS
+        $filterList = Concat($filterList, $this->LENGKAP_CONSENT->AdvancedSearch->toJson(), ","); // Field LENGKAP_CONSENT
+        $filterList = Concat($filterList, $this->LENGKAP_ANESTESI->AdvancedSearch->toJson(), ","); // Field LENGKAP_ANESTESI
+        $filterList = Concat($filterList, $this->LENGKAP_OP->AdvancedSearch->toJson(), ","); // Field LENGKAP_OP
+        $filterList = Concat($filterList, $this->BACK_RM_DATE->AdvancedSearch->toJson(), ","); // Field BACK_RM_DATE
+        $filterList = Concat($filterList, $this->VALID_RM_DATE->AdvancedSearch->toJson(), ","); // Field VALID_RM_DATE
+        $filterList = Concat($filterList, $this->NO_SKP->AdvancedSearch->toJson(), ","); // Field NO_SKP
+        $filterList = Concat($filterList, $this->NO_SKPINAP->AdvancedSearch->toJson(), ","); // Field NO_SKPINAP
+        $filterList = Concat($filterList, $this->DIAGNOSA_ID->AdvancedSearch->toJson(), ","); // Field DIAGNOSA_ID
+        $filterList = Concat($filterList, $this->ticket_all->AdvancedSearch->toJson(), ","); // Field ticket_all
+        $filterList = Concat($filterList, $this->tanggal_rujukan->AdvancedSearch->toJson(), ","); // Field tanggal_rujukan
+        $filterList = Concat($filterList, $this->ISRJ->AdvancedSearch->toJson(), ","); // Field ISRJ
+        $filterList = Concat($filterList, $this->NORUJUKAN->AdvancedSearch->toJson(), ","); // Field NORUJUKAN
+        $filterList = Concat($filterList, $this->PPKRUJUKAN->AdvancedSearch->toJson(), ","); // Field PPKRUJUKAN
+        $filterList = Concat($filterList, $this->LOKASILAKA->AdvancedSearch->toJson(), ","); // Field LOKASILAKA
+        $filterList = Concat($filterList, $this->KDPOLI->AdvancedSearch->toJson(), ","); // Field KDPOLI
+        $filterList = Concat($filterList, $this->EDIT_SEP->AdvancedSearch->toJson(), ","); // Field EDIT_SEP
+        $filterList = Concat($filterList, $this->DELETE_SEP->AdvancedSearch->toJson(), ","); // Field DELETE_SEP
+        $filterList = Concat($filterList, $this->KODE_AGAMA->AdvancedSearch->toJson(), ","); // Field KODE_AGAMA
+        $filterList = Concat($filterList, $this->DIAG_AWAL->AdvancedSearch->toJson(), ","); // Field DIAG_AWAL
+        $filterList = Concat($filterList, $this->AKTIF->AdvancedSearch->toJson(), ","); // Field AKTIF
+        $filterList = Concat($filterList, $this->BILL_INAP->AdvancedSearch->toJson(), ","); // Field BILL_INAP
+        $filterList = Concat($filterList, $this->SEP_PRINTDATE->AdvancedSearch->toJson(), ","); // Field SEP_PRINTDATE
+        $filterList = Concat($filterList, $this->MAPPING_SEP->AdvancedSearch->toJson(), ","); // Field MAPPING_SEP
+        $filterList = Concat($filterList, $this->TRANS_ID->AdvancedSearch->toJson(), ","); // Field TRANS_ID
+        $filterList = Concat($filterList, $this->KDPOLI_EKS->AdvancedSearch->toJson(), ","); // Field KDPOLI_EKS
+        $filterList = Concat($filterList, $this->COB->AdvancedSearch->toJson(), ","); // Field COB
+        $filterList = Concat($filterList, $this->PENJAMIN->AdvancedSearch->toJson(), ","); // Field PENJAMIN
+        $filterList = Concat($filterList, $this->ASALRUJUKAN->AdvancedSearch->toJson(), ","); // Field ASALRUJUKAN
+        $filterList = Concat($filterList, $this->RESPONSEP->AdvancedSearch->toJson(), ","); // Field RESPONSEP
+        $filterList = Concat($filterList, $this->APPROVAL_DESC->AdvancedSearch->toJson(), ","); // Field APPROVAL_DESC
+        $filterList = Concat($filterList, $this->APPROVAL_RESPONAJUKAN->AdvancedSearch->toJson(), ","); // Field APPROVAL_RESPONAJUKAN
+        $filterList = Concat($filterList, $this->APPROVAL_RESPONAPPROV->AdvancedSearch->toJson(), ","); // Field APPROVAL_RESPONAPPROV
+        $filterList = Concat($filterList, $this->RESPONTGLPLG_DESC->AdvancedSearch->toJson(), ","); // Field RESPONTGLPLG_DESC
+        $filterList = Concat($filterList, $this->RESPONPOST_VKLAIM->AdvancedSearch->toJson(), ","); // Field RESPONPOST_VKLAIM
+        $filterList = Concat($filterList, $this->RESPONPUT_VKLAIM->AdvancedSearch->toJson(), ","); // Field RESPONPUT_VKLAIM
+        $filterList = Concat($filterList, $this->RESPONDEL_VKLAIM->AdvancedSearch->toJson(), ","); // Field RESPONDEL_VKLAIM
+        $filterList = Concat($filterList, $this->CALL_TIMES->AdvancedSearch->toJson(), ","); // Field CALL_TIMES
+        $filterList = Concat($filterList, $this->CALL_DATE->AdvancedSearch->toJson(), ","); // Field CALL_DATE
+        $filterList = Concat($filterList, $this->CALL_DATES->AdvancedSearch->toJson(), ","); // Field CALL_DATES
+        $filterList = Concat($filterList, $this->SERVED_DATE->AdvancedSearch->toJson(), ","); // Field SERVED_DATE
+        $filterList = Concat($filterList, $this->SERVED_INAP->AdvancedSearch->toJson(), ","); // Field SERVED_INAP
+        $filterList = Concat($filterList, $this->KDDPJP1->AdvancedSearch->toJson(), ","); // Field KDDPJP1
+        $filterList = Concat($filterList, $this->KDDPJP->AdvancedSearch->toJson(), ","); // Field KDDPJP
+        $filterList = Concat($filterList, $this->IDXDAFTAR->AdvancedSearch->toJson(), ","); // Field IDXDAFTAR
+        $filterList = Concat($filterList, $this->tgl_kontrol->AdvancedSearch->toJson(), ","); // Field tgl_kontrol
+        if ($this->BasicSearch->Keyword != "") {
+            $wrk = "\"" . Config("TABLE_BASIC_SEARCH") . "\":\"" . JsEncode($this->BasicSearch->Keyword) . "\",\"" . Config("TABLE_BASIC_SEARCH_TYPE") . "\":\"" . JsEncode($this->BasicSearch->Type) . "\"";
+            $filterList = Concat($filterList, $wrk, ",");
+        }
+
+        // Return filter list in JSON
+        if ($filterList != "") {
+            $filterList = "\"data\":{" . $filterList . "}";
+        }
+        if ($savedFilterList != "") {
+            $filterList = Concat($filterList, "\"filters\":" . $savedFilterList, ",");
+        }
+        return ($filterList != "") ? "{" . $filterList . "}" : "null";
+    }
+
+    // Process filter list
+    protected function processFilterList()
+    {
+        global $UserProfile;
+        if (Post("ajax") == "savefilters") { // Save filter request (Ajax)
+            $filters = Post("filters");
+            $UserProfile->setSearchFilters(CurrentUserName(), "fV_LABORATORIUMlistsrch", $filters);
+            WriteJson([["success" => true]]); // Success
+            return true;
+        } elseif (Post("cmd") == "resetfilter") {
+            $this->restoreFilterList();
+        }
+        return false;
+    }
+
+    // Restore list of filters
+    protected function restoreFilterList()
+    {
+        // Return if not reset filter
+        if (Post("cmd") !== "resetfilter") {
+            return false;
+        }
+        $filter = json_decode(Post("filter"), true);
+        $this->Command = "search";
+
+        // Field ORG_UNIT_CODE
+        $this->ORG_UNIT_CODE->AdvancedSearch->SearchValue = @$filter["x_ORG_UNIT_CODE"];
+        $this->ORG_UNIT_CODE->AdvancedSearch->SearchOperator = @$filter["z_ORG_UNIT_CODE"];
+        $this->ORG_UNIT_CODE->AdvancedSearch->SearchCondition = @$filter["v_ORG_UNIT_CODE"];
+        $this->ORG_UNIT_CODE->AdvancedSearch->SearchValue2 = @$filter["y_ORG_UNIT_CODE"];
+        $this->ORG_UNIT_CODE->AdvancedSearch->SearchOperator2 = @$filter["w_ORG_UNIT_CODE"];
+        $this->ORG_UNIT_CODE->AdvancedSearch->save();
+
+        // Field NO_REGISTRATION
+        $this->NO_REGISTRATION->AdvancedSearch->SearchValue = @$filter["x_NO_REGISTRATION"];
+        $this->NO_REGISTRATION->AdvancedSearch->SearchOperator = @$filter["z_NO_REGISTRATION"];
+        $this->NO_REGISTRATION->AdvancedSearch->SearchCondition = @$filter["v_NO_REGISTRATION"];
+        $this->NO_REGISTRATION->AdvancedSearch->SearchValue2 = @$filter["y_NO_REGISTRATION"];
+        $this->NO_REGISTRATION->AdvancedSearch->SearchOperator2 = @$filter["w_NO_REGISTRATION"];
+        $this->NO_REGISTRATION->AdvancedSearch->save();
+
+        // Field VISIT_ID
+        $this->VISIT_ID->AdvancedSearch->SearchValue = @$filter["x_VISIT_ID"];
+        $this->VISIT_ID->AdvancedSearch->SearchOperator = @$filter["z_VISIT_ID"];
+        $this->VISIT_ID->AdvancedSearch->SearchCondition = @$filter["v_VISIT_ID"];
+        $this->VISIT_ID->AdvancedSearch->SearchValue2 = @$filter["y_VISIT_ID"];
+        $this->VISIT_ID->AdvancedSearch->SearchOperator2 = @$filter["w_VISIT_ID"];
+        $this->VISIT_ID->AdvancedSearch->save();
+
+        // Field STATUS_PASIEN_ID
+        $this->STATUS_PASIEN_ID->AdvancedSearch->SearchValue = @$filter["x_STATUS_PASIEN_ID"];
+        $this->STATUS_PASIEN_ID->AdvancedSearch->SearchOperator = @$filter["z_STATUS_PASIEN_ID"];
+        $this->STATUS_PASIEN_ID->AdvancedSearch->SearchCondition = @$filter["v_STATUS_PASIEN_ID"];
+        $this->STATUS_PASIEN_ID->AdvancedSearch->SearchValue2 = @$filter["y_STATUS_PASIEN_ID"];
+        $this->STATUS_PASIEN_ID->AdvancedSearch->SearchOperator2 = @$filter["w_STATUS_PASIEN_ID"];
+        $this->STATUS_PASIEN_ID->AdvancedSearch->save();
+
+        // Field RUJUKAN_ID
+        $this->RUJUKAN_ID->AdvancedSearch->SearchValue = @$filter["x_RUJUKAN_ID"];
+        $this->RUJUKAN_ID->AdvancedSearch->SearchOperator = @$filter["z_RUJUKAN_ID"];
+        $this->RUJUKAN_ID->AdvancedSearch->SearchCondition = @$filter["v_RUJUKAN_ID"];
+        $this->RUJUKAN_ID->AdvancedSearch->SearchValue2 = @$filter["y_RUJUKAN_ID"];
+        $this->RUJUKAN_ID->AdvancedSearch->SearchOperator2 = @$filter["w_RUJUKAN_ID"];
+        $this->RUJUKAN_ID->AdvancedSearch->save();
+
+        // Field ADDRESS_OF_RUJUKAN
+        $this->ADDRESS_OF_RUJUKAN->AdvancedSearch->SearchValue = @$filter["x_ADDRESS_OF_RUJUKAN"];
+        $this->ADDRESS_OF_RUJUKAN->AdvancedSearch->SearchOperator = @$filter["z_ADDRESS_OF_RUJUKAN"];
+        $this->ADDRESS_OF_RUJUKAN->AdvancedSearch->SearchCondition = @$filter["v_ADDRESS_OF_RUJUKAN"];
+        $this->ADDRESS_OF_RUJUKAN->AdvancedSearch->SearchValue2 = @$filter["y_ADDRESS_OF_RUJUKAN"];
+        $this->ADDRESS_OF_RUJUKAN->AdvancedSearch->SearchOperator2 = @$filter["w_ADDRESS_OF_RUJUKAN"];
+        $this->ADDRESS_OF_RUJUKAN->AdvancedSearch->save();
+
+        // Field REASON_ID
+        $this->REASON_ID->AdvancedSearch->SearchValue = @$filter["x_REASON_ID"];
+        $this->REASON_ID->AdvancedSearch->SearchOperator = @$filter["z_REASON_ID"];
+        $this->REASON_ID->AdvancedSearch->SearchCondition = @$filter["v_REASON_ID"];
+        $this->REASON_ID->AdvancedSearch->SearchValue2 = @$filter["y_REASON_ID"];
+        $this->REASON_ID->AdvancedSearch->SearchOperator2 = @$filter["w_REASON_ID"];
+        $this->REASON_ID->AdvancedSearch->save();
+
+        // Field WAY_ID
+        $this->WAY_ID->AdvancedSearch->SearchValue = @$filter["x_WAY_ID"];
+        $this->WAY_ID->AdvancedSearch->SearchOperator = @$filter["z_WAY_ID"];
+        $this->WAY_ID->AdvancedSearch->SearchCondition = @$filter["v_WAY_ID"];
+        $this->WAY_ID->AdvancedSearch->SearchValue2 = @$filter["y_WAY_ID"];
+        $this->WAY_ID->AdvancedSearch->SearchOperator2 = @$filter["w_WAY_ID"];
+        $this->WAY_ID->AdvancedSearch->save();
+
+        // Field PATIENT_CATEGORY_ID
+        $this->PATIENT_CATEGORY_ID->AdvancedSearch->SearchValue = @$filter["x_PATIENT_CATEGORY_ID"];
+        $this->PATIENT_CATEGORY_ID->AdvancedSearch->SearchOperator = @$filter["z_PATIENT_CATEGORY_ID"];
+        $this->PATIENT_CATEGORY_ID->AdvancedSearch->SearchCondition = @$filter["v_PATIENT_CATEGORY_ID"];
+        $this->PATIENT_CATEGORY_ID->AdvancedSearch->SearchValue2 = @$filter["y_PATIENT_CATEGORY_ID"];
+        $this->PATIENT_CATEGORY_ID->AdvancedSearch->SearchOperator2 = @$filter["w_PATIENT_CATEGORY_ID"];
+        $this->PATIENT_CATEGORY_ID->AdvancedSearch->save();
+
+        // Field BOOKED_DATE
+        $this->BOOKED_DATE->AdvancedSearch->SearchValue = @$filter["x_BOOKED_DATE"];
+        $this->BOOKED_DATE->AdvancedSearch->SearchOperator = @$filter["z_BOOKED_DATE"];
+        $this->BOOKED_DATE->AdvancedSearch->SearchCondition = @$filter["v_BOOKED_DATE"];
+        $this->BOOKED_DATE->AdvancedSearch->SearchValue2 = @$filter["y_BOOKED_DATE"];
+        $this->BOOKED_DATE->AdvancedSearch->SearchOperator2 = @$filter["w_BOOKED_DATE"];
+        $this->BOOKED_DATE->AdvancedSearch->save();
+
+        // Field VISIT_DATE
+        $this->VISIT_DATE->AdvancedSearch->SearchValue = @$filter["x_VISIT_DATE"];
+        $this->VISIT_DATE->AdvancedSearch->SearchOperator = @$filter["z_VISIT_DATE"];
+        $this->VISIT_DATE->AdvancedSearch->SearchCondition = @$filter["v_VISIT_DATE"];
+        $this->VISIT_DATE->AdvancedSearch->SearchValue2 = @$filter["y_VISIT_DATE"];
+        $this->VISIT_DATE->AdvancedSearch->SearchOperator2 = @$filter["w_VISIT_DATE"];
+        $this->VISIT_DATE->AdvancedSearch->save();
+
+        // Field ISNEW
+        $this->ISNEW->AdvancedSearch->SearchValue = @$filter["x_ISNEW"];
+        $this->ISNEW->AdvancedSearch->SearchOperator = @$filter["z_ISNEW"];
+        $this->ISNEW->AdvancedSearch->SearchCondition = @$filter["v_ISNEW"];
+        $this->ISNEW->AdvancedSearch->SearchValue2 = @$filter["y_ISNEW"];
+        $this->ISNEW->AdvancedSearch->SearchOperator2 = @$filter["w_ISNEW"];
+        $this->ISNEW->AdvancedSearch->save();
+
+        // Field FOLLOW_UP
+        $this->FOLLOW_UP->AdvancedSearch->SearchValue = @$filter["x_FOLLOW_UP"];
+        $this->FOLLOW_UP->AdvancedSearch->SearchOperator = @$filter["z_FOLLOW_UP"];
+        $this->FOLLOW_UP->AdvancedSearch->SearchCondition = @$filter["v_FOLLOW_UP"];
+        $this->FOLLOW_UP->AdvancedSearch->SearchValue2 = @$filter["y_FOLLOW_UP"];
+        $this->FOLLOW_UP->AdvancedSearch->SearchOperator2 = @$filter["w_FOLLOW_UP"];
+        $this->FOLLOW_UP->AdvancedSearch->save();
+
+        // Field PLACE_TYPE
+        $this->PLACE_TYPE->AdvancedSearch->SearchValue = @$filter["x_PLACE_TYPE"];
+        $this->PLACE_TYPE->AdvancedSearch->SearchOperator = @$filter["z_PLACE_TYPE"];
+        $this->PLACE_TYPE->AdvancedSearch->SearchCondition = @$filter["v_PLACE_TYPE"];
+        $this->PLACE_TYPE->AdvancedSearch->SearchValue2 = @$filter["y_PLACE_TYPE"];
+        $this->PLACE_TYPE->AdvancedSearch->SearchOperator2 = @$filter["w_PLACE_TYPE"];
+        $this->PLACE_TYPE->AdvancedSearch->save();
+
+        // Field CLINIC_ID
+        $this->CLINIC_ID->AdvancedSearch->SearchValue = @$filter["x_CLINIC_ID"];
+        $this->CLINIC_ID->AdvancedSearch->SearchOperator = @$filter["z_CLINIC_ID"];
+        $this->CLINIC_ID->AdvancedSearch->SearchCondition = @$filter["v_CLINIC_ID"];
+        $this->CLINIC_ID->AdvancedSearch->SearchValue2 = @$filter["y_CLINIC_ID"];
+        $this->CLINIC_ID->AdvancedSearch->SearchOperator2 = @$filter["w_CLINIC_ID"];
+        $this->CLINIC_ID->AdvancedSearch->save();
+
+        // Field CLINIC_ID_FROM
+        $this->CLINIC_ID_FROM->AdvancedSearch->SearchValue = @$filter["x_CLINIC_ID_FROM"];
+        $this->CLINIC_ID_FROM->AdvancedSearch->SearchOperator = @$filter["z_CLINIC_ID_FROM"];
+        $this->CLINIC_ID_FROM->AdvancedSearch->SearchCondition = @$filter["v_CLINIC_ID_FROM"];
+        $this->CLINIC_ID_FROM->AdvancedSearch->SearchValue2 = @$filter["y_CLINIC_ID_FROM"];
+        $this->CLINIC_ID_FROM->AdvancedSearch->SearchOperator2 = @$filter["w_CLINIC_ID_FROM"];
+        $this->CLINIC_ID_FROM->AdvancedSearch->save();
+
+        // Field CLASS_ROOM_ID
+        $this->CLASS_ROOM_ID->AdvancedSearch->SearchValue = @$filter["x_CLASS_ROOM_ID"];
+        $this->CLASS_ROOM_ID->AdvancedSearch->SearchOperator = @$filter["z_CLASS_ROOM_ID"];
+        $this->CLASS_ROOM_ID->AdvancedSearch->SearchCondition = @$filter["v_CLASS_ROOM_ID"];
+        $this->CLASS_ROOM_ID->AdvancedSearch->SearchValue2 = @$filter["y_CLASS_ROOM_ID"];
+        $this->CLASS_ROOM_ID->AdvancedSearch->SearchOperator2 = @$filter["w_CLASS_ROOM_ID"];
+        $this->CLASS_ROOM_ID->AdvancedSearch->save();
+
+        // Field BED_ID
+        $this->BED_ID->AdvancedSearch->SearchValue = @$filter["x_BED_ID"];
+        $this->BED_ID->AdvancedSearch->SearchOperator = @$filter["z_BED_ID"];
+        $this->BED_ID->AdvancedSearch->SearchCondition = @$filter["v_BED_ID"];
+        $this->BED_ID->AdvancedSearch->SearchValue2 = @$filter["y_BED_ID"];
+        $this->BED_ID->AdvancedSearch->SearchOperator2 = @$filter["w_BED_ID"];
+        $this->BED_ID->AdvancedSearch->save();
+
+        // Field KELUAR_ID
+        $this->KELUAR_ID->AdvancedSearch->SearchValue = @$filter["x_KELUAR_ID"];
+        $this->KELUAR_ID->AdvancedSearch->SearchOperator = @$filter["z_KELUAR_ID"];
+        $this->KELUAR_ID->AdvancedSearch->SearchCondition = @$filter["v_KELUAR_ID"];
+        $this->KELUAR_ID->AdvancedSearch->SearchValue2 = @$filter["y_KELUAR_ID"];
+        $this->KELUAR_ID->AdvancedSearch->SearchOperator2 = @$filter["w_KELUAR_ID"];
+        $this->KELUAR_ID->AdvancedSearch->save();
+
+        // Field IN_DATE
+        $this->IN_DATE->AdvancedSearch->SearchValue = @$filter["x_IN_DATE"];
+        $this->IN_DATE->AdvancedSearch->SearchOperator = @$filter["z_IN_DATE"];
+        $this->IN_DATE->AdvancedSearch->SearchCondition = @$filter["v_IN_DATE"];
+        $this->IN_DATE->AdvancedSearch->SearchValue2 = @$filter["y_IN_DATE"];
+        $this->IN_DATE->AdvancedSearch->SearchOperator2 = @$filter["w_IN_DATE"];
+        $this->IN_DATE->AdvancedSearch->save();
+
+        // Field EXIT_DATE
+        $this->EXIT_DATE->AdvancedSearch->SearchValue = @$filter["x_EXIT_DATE"];
+        $this->EXIT_DATE->AdvancedSearch->SearchOperator = @$filter["z_EXIT_DATE"];
+        $this->EXIT_DATE->AdvancedSearch->SearchCondition = @$filter["v_EXIT_DATE"];
+        $this->EXIT_DATE->AdvancedSearch->SearchValue2 = @$filter["y_EXIT_DATE"];
+        $this->EXIT_DATE->AdvancedSearch->SearchOperator2 = @$filter["w_EXIT_DATE"];
+        $this->EXIT_DATE->AdvancedSearch->save();
+
+        // Field DIANTAR_OLEH
+        $this->DIANTAR_OLEH->AdvancedSearch->SearchValue = @$filter["x_DIANTAR_OLEH"];
+        $this->DIANTAR_OLEH->AdvancedSearch->SearchOperator = @$filter["z_DIANTAR_OLEH"];
+        $this->DIANTAR_OLEH->AdvancedSearch->SearchCondition = @$filter["v_DIANTAR_OLEH"];
+        $this->DIANTAR_OLEH->AdvancedSearch->SearchValue2 = @$filter["y_DIANTAR_OLEH"];
+        $this->DIANTAR_OLEH->AdvancedSearch->SearchOperator2 = @$filter["w_DIANTAR_OLEH"];
+        $this->DIANTAR_OLEH->AdvancedSearch->save();
+
+        // Field GENDER
+        $this->GENDER->AdvancedSearch->SearchValue = @$filter["x_GENDER"];
+        $this->GENDER->AdvancedSearch->SearchOperator = @$filter["z_GENDER"];
+        $this->GENDER->AdvancedSearch->SearchCondition = @$filter["v_GENDER"];
+        $this->GENDER->AdvancedSearch->SearchValue2 = @$filter["y_GENDER"];
+        $this->GENDER->AdvancedSearch->SearchOperator2 = @$filter["w_GENDER"];
+        $this->GENDER->AdvancedSearch->save();
+
+        // Field DESCRIPTION
+        $this->DESCRIPTION->AdvancedSearch->SearchValue = @$filter["x_DESCRIPTION"];
+        $this->DESCRIPTION->AdvancedSearch->SearchOperator = @$filter["z_DESCRIPTION"];
+        $this->DESCRIPTION->AdvancedSearch->SearchCondition = @$filter["v_DESCRIPTION"];
+        $this->DESCRIPTION->AdvancedSearch->SearchValue2 = @$filter["y_DESCRIPTION"];
+        $this->DESCRIPTION->AdvancedSearch->SearchOperator2 = @$filter["w_DESCRIPTION"];
+        $this->DESCRIPTION->AdvancedSearch->save();
+
+        // Field VISITOR_ADDRESS
+        $this->VISITOR_ADDRESS->AdvancedSearch->SearchValue = @$filter["x_VISITOR_ADDRESS"];
+        $this->VISITOR_ADDRESS->AdvancedSearch->SearchOperator = @$filter["z_VISITOR_ADDRESS"];
+        $this->VISITOR_ADDRESS->AdvancedSearch->SearchCondition = @$filter["v_VISITOR_ADDRESS"];
+        $this->VISITOR_ADDRESS->AdvancedSearch->SearchValue2 = @$filter["y_VISITOR_ADDRESS"];
+        $this->VISITOR_ADDRESS->AdvancedSearch->SearchOperator2 = @$filter["w_VISITOR_ADDRESS"];
+        $this->VISITOR_ADDRESS->AdvancedSearch->save();
+
+        // Field MODIFIED_BY
+        $this->MODIFIED_BY->AdvancedSearch->SearchValue = @$filter["x_MODIFIED_BY"];
+        $this->MODIFIED_BY->AdvancedSearch->SearchOperator = @$filter["z_MODIFIED_BY"];
+        $this->MODIFIED_BY->AdvancedSearch->SearchCondition = @$filter["v_MODIFIED_BY"];
+        $this->MODIFIED_BY->AdvancedSearch->SearchValue2 = @$filter["y_MODIFIED_BY"];
+        $this->MODIFIED_BY->AdvancedSearch->SearchOperator2 = @$filter["w_MODIFIED_BY"];
+        $this->MODIFIED_BY->AdvancedSearch->save();
+
+        // Field MODIFIED_DATE
+        $this->MODIFIED_DATE->AdvancedSearch->SearchValue = @$filter["x_MODIFIED_DATE"];
+        $this->MODIFIED_DATE->AdvancedSearch->SearchOperator = @$filter["z_MODIFIED_DATE"];
+        $this->MODIFIED_DATE->AdvancedSearch->SearchCondition = @$filter["v_MODIFIED_DATE"];
+        $this->MODIFIED_DATE->AdvancedSearch->SearchValue2 = @$filter["y_MODIFIED_DATE"];
+        $this->MODIFIED_DATE->AdvancedSearch->SearchOperator2 = @$filter["w_MODIFIED_DATE"];
+        $this->MODIFIED_DATE->AdvancedSearch->save();
+
+        // Field MODIFIED_FROM
+        $this->MODIFIED_FROM->AdvancedSearch->SearchValue = @$filter["x_MODIFIED_FROM"];
+        $this->MODIFIED_FROM->AdvancedSearch->SearchOperator = @$filter["z_MODIFIED_FROM"];
+        $this->MODIFIED_FROM->AdvancedSearch->SearchCondition = @$filter["v_MODIFIED_FROM"];
+        $this->MODIFIED_FROM->AdvancedSearch->SearchValue2 = @$filter["y_MODIFIED_FROM"];
+        $this->MODIFIED_FROM->AdvancedSearch->SearchOperator2 = @$filter["w_MODIFIED_FROM"];
+        $this->MODIFIED_FROM->AdvancedSearch->save();
+
+        // Field EMPLOYEE_ID
+        $this->EMPLOYEE_ID->AdvancedSearch->SearchValue = @$filter["x_EMPLOYEE_ID"];
+        $this->EMPLOYEE_ID->AdvancedSearch->SearchOperator = @$filter["z_EMPLOYEE_ID"];
+        $this->EMPLOYEE_ID->AdvancedSearch->SearchCondition = @$filter["v_EMPLOYEE_ID"];
+        $this->EMPLOYEE_ID->AdvancedSearch->SearchValue2 = @$filter["y_EMPLOYEE_ID"];
+        $this->EMPLOYEE_ID->AdvancedSearch->SearchOperator2 = @$filter["w_EMPLOYEE_ID"];
+        $this->EMPLOYEE_ID->AdvancedSearch->save();
+
+        // Field EMPLOYEE_ID_FROM
+        $this->EMPLOYEE_ID_FROM->AdvancedSearch->SearchValue = @$filter["x_EMPLOYEE_ID_FROM"];
+        $this->EMPLOYEE_ID_FROM->AdvancedSearch->SearchOperator = @$filter["z_EMPLOYEE_ID_FROM"];
+        $this->EMPLOYEE_ID_FROM->AdvancedSearch->SearchCondition = @$filter["v_EMPLOYEE_ID_FROM"];
+        $this->EMPLOYEE_ID_FROM->AdvancedSearch->SearchValue2 = @$filter["y_EMPLOYEE_ID_FROM"];
+        $this->EMPLOYEE_ID_FROM->AdvancedSearch->SearchOperator2 = @$filter["w_EMPLOYEE_ID_FROM"];
+        $this->EMPLOYEE_ID_FROM->AdvancedSearch->save();
+
+        // Field RESPONSIBLE_ID
+        $this->RESPONSIBLE_ID->AdvancedSearch->SearchValue = @$filter["x_RESPONSIBLE_ID"];
+        $this->RESPONSIBLE_ID->AdvancedSearch->SearchOperator = @$filter["z_RESPONSIBLE_ID"];
+        $this->RESPONSIBLE_ID->AdvancedSearch->SearchCondition = @$filter["v_RESPONSIBLE_ID"];
+        $this->RESPONSIBLE_ID->AdvancedSearch->SearchValue2 = @$filter["y_RESPONSIBLE_ID"];
+        $this->RESPONSIBLE_ID->AdvancedSearch->SearchOperator2 = @$filter["w_RESPONSIBLE_ID"];
+        $this->RESPONSIBLE_ID->AdvancedSearch->save();
+
+        // Field RESPONSIBLE
+        $this->RESPONSIBLE->AdvancedSearch->SearchValue = @$filter["x_RESPONSIBLE"];
+        $this->RESPONSIBLE->AdvancedSearch->SearchOperator = @$filter["z_RESPONSIBLE"];
+        $this->RESPONSIBLE->AdvancedSearch->SearchCondition = @$filter["v_RESPONSIBLE"];
+        $this->RESPONSIBLE->AdvancedSearch->SearchValue2 = @$filter["y_RESPONSIBLE"];
+        $this->RESPONSIBLE->AdvancedSearch->SearchOperator2 = @$filter["w_RESPONSIBLE"];
+        $this->RESPONSIBLE->AdvancedSearch->save();
+
+        // Field FAMILY_STATUS_ID
+        $this->FAMILY_STATUS_ID->AdvancedSearch->SearchValue = @$filter["x_FAMILY_STATUS_ID"];
+        $this->FAMILY_STATUS_ID->AdvancedSearch->SearchOperator = @$filter["z_FAMILY_STATUS_ID"];
+        $this->FAMILY_STATUS_ID->AdvancedSearch->SearchCondition = @$filter["v_FAMILY_STATUS_ID"];
+        $this->FAMILY_STATUS_ID->AdvancedSearch->SearchValue2 = @$filter["y_FAMILY_STATUS_ID"];
+        $this->FAMILY_STATUS_ID->AdvancedSearch->SearchOperator2 = @$filter["w_FAMILY_STATUS_ID"];
+        $this->FAMILY_STATUS_ID->AdvancedSearch->save();
+
+        // Field TICKET_NO
+        $this->TICKET_NO->AdvancedSearch->SearchValue = @$filter["x_TICKET_NO"];
+        $this->TICKET_NO->AdvancedSearch->SearchOperator = @$filter["z_TICKET_NO"];
+        $this->TICKET_NO->AdvancedSearch->SearchCondition = @$filter["v_TICKET_NO"];
+        $this->TICKET_NO->AdvancedSearch->SearchValue2 = @$filter["y_TICKET_NO"];
+        $this->TICKET_NO->AdvancedSearch->SearchOperator2 = @$filter["w_TICKET_NO"];
+        $this->TICKET_NO->AdvancedSearch->save();
+
+        // Field ISATTENDED
+        $this->ISATTENDED->AdvancedSearch->SearchValue = @$filter["x_ISATTENDED"];
+        $this->ISATTENDED->AdvancedSearch->SearchOperator = @$filter["z_ISATTENDED"];
+        $this->ISATTENDED->AdvancedSearch->SearchCondition = @$filter["v_ISATTENDED"];
+        $this->ISATTENDED->AdvancedSearch->SearchValue2 = @$filter["y_ISATTENDED"];
+        $this->ISATTENDED->AdvancedSearch->SearchOperator2 = @$filter["w_ISATTENDED"];
+        $this->ISATTENDED->AdvancedSearch->save();
+
+        // Field PAYOR_ID
+        $this->PAYOR_ID->AdvancedSearch->SearchValue = @$filter["x_PAYOR_ID"];
+        $this->PAYOR_ID->AdvancedSearch->SearchOperator = @$filter["z_PAYOR_ID"];
+        $this->PAYOR_ID->AdvancedSearch->SearchCondition = @$filter["v_PAYOR_ID"];
+        $this->PAYOR_ID->AdvancedSearch->SearchValue2 = @$filter["y_PAYOR_ID"];
+        $this->PAYOR_ID->AdvancedSearch->SearchOperator2 = @$filter["w_PAYOR_ID"];
+        $this->PAYOR_ID->AdvancedSearch->save();
+
+        // Field CLASS_ID
+        $this->CLASS_ID->AdvancedSearch->SearchValue = @$filter["x_CLASS_ID"];
+        $this->CLASS_ID->AdvancedSearch->SearchOperator = @$filter["z_CLASS_ID"];
+        $this->CLASS_ID->AdvancedSearch->SearchCondition = @$filter["v_CLASS_ID"];
+        $this->CLASS_ID->AdvancedSearch->SearchValue2 = @$filter["y_CLASS_ID"];
+        $this->CLASS_ID->AdvancedSearch->SearchOperator2 = @$filter["w_CLASS_ID"];
+        $this->CLASS_ID->AdvancedSearch->save();
+
+        // Field ISPERTARIF
+        $this->ISPERTARIF->AdvancedSearch->SearchValue = @$filter["x_ISPERTARIF"];
+        $this->ISPERTARIF->AdvancedSearch->SearchOperator = @$filter["z_ISPERTARIF"];
+        $this->ISPERTARIF->AdvancedSearch->SearchCondition = @$filter["v_ISPERTARIF"];
+        $this->ISPERTARIF->AdvancedSearch->SearchValue2 = @$filter["y_ISPERTARIF"];
+        $this->ISPERTARIF->AdvancedSearch->SearchOperator2 = @$filter["w_ISPERTARIF"];
+        $this->ISPERTARIF->AdvancedSearch->save();
+
+        // Field KAL_ID
+        $this->KAL_ID->AdvancedSearch->SearchValue = @$filter["x_KAL_ID"];
+        $this->KAL_ID->AdvancedSearch->SearchOperator = @$filter["z_KAL_ID"];
+        $this->KAL_ID->AdvancedSearch->SearchCondition = @$filter["v_KAL_ID"];
+        $this->KAL_ID->AdvancedSearch->SearchValue2 = @$filter["y_KAL_ID"];
+        $this->KAL_ID->AdvancedSearch->SearchOperator2 = @$filter["w_KAL_ID"];
+        $this->KAL_ID->AdvancedSearch->save();
+
+        // Field EMPLOYEE_INAP
+        $this->EMPLOYEE_INAP->AdvancedSearch->SearchValue = @$filter["x_EMPLOYEE_INAP"];
+        $this->EMPLOYEE_INAP->AdvancedSearch->SearchOperator = @$filter["z_EMPLOYEE_INAP"];
+        $this->EMPLOYEE_INAP->AdvancedSearch->SearchCondition = @$filter["v_EMPLOYEE_INAP"];
+        $this->EMPLOYEE_INAP->AdvancedSearch->SearchValue2 = @$filter["y_EMPLOYEE_INAP"];
+        $this->EMPLOYEE_INAP->AdvancedSearch->SearchOperator2 = @$filter["w_EMPLOYEE_INAP"];
+        $this->EMPLOYEE_INAP->AdvancedSearch->save();
+
+        // Field PASIEN_ID
+        $this->PASIEN_ID->AdvancedSearch->SearchValue = @$filter["x_PASIEN_ID"];
+        $this->PASIEN_ID->AdvancedSearch->SearchOperator = @$filter["z_PASIEN_ID"];
+        $this->PASIEN_ID->AdvancedSearch->SearchCondition = @$filter["v_PASIEN_ID"];
+        $this->PASIEN_ID->AdvancedSearch->SearchValue2 = @$filter["y_PASIEN_ID"];
+        $this->PASIEN_ID->AdvancedSearch->SearchOperator2 = @$filter["w_PASIEN_ID"];
+        $this->PASIEN_ID->AdvancedSearch->save();
+
+        // Field KARYAWAN
+        $this->KARYAWAN->AdvancedSearch->SearchValue = @$filter["x_KARYAWAN"];
+        $this->KARYAWAN->AdvancedSearch->SearchOperator = @$filter["z_KARYAWAN"];
+        $this->KARYAWAN->AdvancedSearch->SearchCondition = @$filter["v_KARYAWAN"];
+        $this->KARYAWAN->AdvancedSearch->SearchValue2 = @$filter["y_KARYAWAN"];
+        $this->KARYAWAN->AdvancedSearch->SearchOperator2 = @$filter["w_KARYAWAN"];
+        $this->KARYAWAN->AdvancedSearch->save();
+
+        // Field ACCOUNT_ID
+        $this->ACCOUNT_ID->AdvancedSearch->SearchValue = @$filter["x_ACCOUNT_ID"];
+        $this->ACCOUNT_ID->AdvancedSearch->SearchOperator = @$filter["z_ACCOUNT_ID"];
+        $this->ACCOUNT_ID->AdvancedSearch->SearchCondition = @$filter["v_ACCOUNT_ID"];
+        $this->ACCOUNT_ID->AdvancedSearch->SearchValue2 = @$filter["y_ACCOUNT_ID"];
+        $this->ACCOUNT_ID->AdvancedSearch->SearchOperator2 = @$filter["w_ACCOUNT_ID"];
+        $this->ACCOUNT_ID->AdvancedSearch->save();
+
+        // Field CLASS_ID_PLAFOND
+        $this->CLASS_ID_PLAFOND->AdvancedSearch->SearchValue = @$filter["x_CLASS_ID_PLAFOND"];
+        $this->CLASS_ID_PLAFOND->AdvancedSearch->SearchOperator = @$filter["z_CLASS_ID_PLAFOND"];
+        $this->CLASS_ID_PLAFOND->AdvancedSearch->SearchCondition = @$filter["v_CLASS_ID_PLAFOND"];
+        $this->CLASS_ID_PLAFOND->AdvancedSearch->SearchValue2 = @$filter["y_CLASS_ID_PLAFOND"];
+        $this->CLASS_ID_PLAFOND->AdvancedSearch->SearchOperator2 = @$filter["w_CLASS_ID_PLAFOND"];
+        $this->CLASS_ID_PLAFOND->AdvancedSearch->save();
+
+        // Field BACKCHARGE
+        $this->BACKCHARGE->AdvancedSearch->SearchValue = @$filter["x_BACKCHARGE"];
+        $this->BACKCHARGE->AdvancedSearch->SearchOperator = @$filter["z_BACKCHARGE"];
+        $this->BACKCHARGE->AdvancedSearch->SearchCondition = @$filter["v_BACKCHARGE"];
+        $this->BACKCHARGE->AdvancedSearch->SearchValue2 = @$filter["y_BACKCHARGE"];
+        $this->BACKCHARGE->AdvancedSearch->SearchOperator2 = @$filter["w_BACKCHARGE"];
+        $this->BACKCHARGE->AdvancedSearch->save();
+
+        // Field COVERAGE_ID
+        $this->COVERAGE_ID->AdvancedSearch->SearchValue = @$filter["x_COVERAGE_ID"];
+        $this->COVERAGE_ID->AdvancedSearch->SearchOperator = @$filter["z_COVERAGE_ID"];
+        $this->COVERAGE_ID->AdvancedSearch->SearchCondition = @$filter["v_COVERAGE_ID"];
+        $this->COVERAGE_ID->AdvancedSearch->SearchValue2 = @$filter["y_COVERAGE_ID"];
+        $this->COVERAGE_ID->AdvancedSearch->SearchOperator2 = @$filter["w_COVERAGE_ID"];
+        $this->COVERAGE_ID->AdvancedSearch->save();
+
+        // Field AGEYEAR
+        $this->AGEYEAR->AdvancedSearch->SearchValue = @$filter["x_AGEYEAR"];
+        $this->AGEYEAR->AdvancedSearch->SearchOperator = @$filter["z_AGEYEAR"];
+        $this->AGEYEAR->AdvancedSearch->SearchCondition = @$filter["v_AGEYEAR"];
+        $this->AGEYEAR->AdvancedSearch->SearchValue2 = @$filter["y_AGEYEAR"];
+        $this->AGEYEAR->AdvancedSearch->SearchOperator2 = @$filter["w_AGEYEAR"];
+        $this->AGEYEAR->AdvancedSearch->save();
+
+        // Field AGEMONTH
+        $this->AGEMONTH->AdvancedSearch->SearchValue = @$filter["x_AGEMONTH"];
+        $this->AGEMONTH->AdvancedSearch->SearchOperator = @$filter["z_AGEMONTH"];
+        $this->AGEMONTH->AdvancedSearch->SearchCondition = @$filter["v_AGEMONTH"];
+        $this->AGEMONTH->AdvancedSearch->SearchValue2 = @$filter["y_AGEMONTH"];
+        $this->AGEMONTH->AdvancedSearch->SearchOperator2 = @$filter["w_AGEMONTH"];
+        $this->AGEMONTH->AdvancedSearch->save();
+
+        // Field AGEDAY
+        $this->AGEDAY->AdvancedSearch->SearchValue = @$filter["x_AGEDAY"];
+        $this->AGEDAY->AdvancedSearch->SearchOperator = @$filter["z_AGEDAY"];
+        $this->AGEDAY->AdvancedSearch->SearchCondition = @$filter["v_AGEDAY"];
+        $this->AGEDAY->AdvancedSearch->SearchValue2 = @$filter["y_AGEDAY"];
+        $this->AGEDAY->AdvancedSearch->SearchOperator2 = @$filter["w_AGEDAY"];
+        $this->AGEDAY->AdvancedSearch->save();
+
+        // Field RECOMENDATION
+        $this->RECOMENDATION->AdvancedSearch->SearchValue = @$filter["x_RECOMENDATION"];
+        $this->RECOMENDATION->AdvancedSearch->SearchOperator = @$filter["z_RECOMENDATION"];
+        $this->RECOMENDATION->AdvancedSearch->SearchCondition = @$filter["v_RECOMENDATION"];
+        $this->RECOMENDATION->AdvancedSearch->SearchValue2 = @$filter["y_RECOMENDATION"];
+        $this->RECOMENDATION->AdvancedSearch->SearchOperator2 = @$filter["w_RECOMENDATION"];
+        $this->RECOMENDATION->AdvancedSearch->save();
+
+        // Field CONCLUSION
+        $this->CONCLUSION->AdvancedSearch->SearchValue = @$filter["x_CONCLUSION"];
+        $this->CONCLUSION->AdvancedSearch->SearchOperator = @$filter["z_CONCLUSION"];
+        $this->CONCLUSION->AdvancedSearch->SearchCondition = @$filter["v_CONCLUSION"];
+        $this->CONCLUSION->AdvancedSearch->SearchValue2 = @$filter["y_CONCLUSION"];
+        $this->CONCLUSION->AdvancedSearch->SearchOperator2 = @$filter["w_CONCLUSION"];
+        $this->CONCLUSION->AdvancedSearch->save();
+
+        // Field SPECIMENNO
+        $this->SPECIMENNO->AdvancedSearch->SearchValue = @$filter["x_SPECIMENNO"];
+        $this->SPECIMENNO->AdvancedSearch->SearchOperator = @$filter["z_SPECIMENNO"];
+        $this->SPECIMENNO->AdvancedSearch->SearchCondition = @$filter["v_SPECIMENNO"];
+        $this->SPECIMENNO->AdvancedSearch->SearchValue2 = @$filter["y_SPECIMENNO"];
+        $this->SPECIMENNO->AdvancedSearch->SearchOperator2 = @$filter["w_SPECIMENNO"];
+        $this->SPECIMENNO->AdvancedSearch->save();
+
+        // Field LOCKED
+        $this->LOCKED->AdvancedSearch->SearchValue = @$filter["x_LOCKED"];
+        $this->LOCKED->AdvancedSearch->SearchOperator = @$filter["z_LOCKED"];
+        $this->LOCKED->AdvancedSearch->SearchCondition = @$filter["v_LOCKED"];
+        $this->LOCKED->AdvancedSearch->SearchValue2 = @$filter["y_LOCKED"];
+        $this->LOCKED->AdvancedSearch->SearchOperator2 = @$filter["w_LOCKED"];
+        $this->LOCKED->AdvancedSearch->save();
+
+        // Field RM_OUT_DATE
+        $this->RM_OUT_DATE->AdvancedSearch->SearchValue = @$filter["x_RM_OUT_DATE"];
+        $this->RM_OUT_DATE->AdvancedSearch->SearchOperator = @$filter["z_RM_OUT_DATE"];
+        $this->RM_OUT_DATE->AdvancedSearch->SearchCondition = @$filter["v_RM_OUT_DATE"];
+        $this->RM_OUT_DATE->AdvancedSearch->SearchValue2 = @$filter["y_RM_OUT_DATE"];
+        $this->RM_OUT_DATE->AdvancedSearch->SearchOperator2 = @$filter["w_RM_OUT_DATE"];
+        $this->RM_OUT_DATE->AdvancedSearch->save();
+
+        // Field RM_IN_DATE
+        $this->RM_IN_DATE->AdvancedSearch->SearchValue = @$filter["x_RM_IN_DATE"];
+        $this->RM_IN_DATE->AdvancedSearch->SearchOperator = @$filter["z_RM_IN_DATE"];
+        $this->RM_IN_DATE->AdvancedSearch->SearchCondition = @$filter["v_RM_IN_DATE"];
+        $this->RM_IN_DATE->AdvancedSearch->SearchValue2 = @$filter["y_RM_IN_DATE"];
+        $this->RM_IN_DATE->AdvancedSearch->SearchOperator2 = @$filter["w_RM_IN_DATE"];
+        $this->RM_IN_DATE->AdvancedSearch->save();
+
+        // Field LAMA_PINJAM
+        $this->LAMA_PINJAM->AdvancedSearch->SearchValue = @$filter["x_LAMA_PINJAM"];
+        $this->LAMA_PINJAM->AdvancedSearch->SearchOperator = @$filter["z_LAMA_PINJAM"];
+        $this->LAMA_PINJAM->AdvancedSearch->SearchCondition = @$filter["v_LAMA_PINJAM"];
+        $this->LAMA_PINJAM->AdvancedSearch->SearchValue2 = @$filter["y_LAMA_PINJAM"];
+        $this->LAMA_PINJAM->AdvancedSearch->SearchOperator2 = @$filter["w_LAMA_PINJAM"];
+        $this->LAMA_PINJAM->AdvancedSearch->save();
+
+        // Field STANDAR_RJ
+        $this->STANDAR_RJ->AdvancedSearch->SearchValue = @$filter["x_STANDAR_RJ"];
+        $this->STANDAR_RJ->AdvancedSearch->SearchOperator = @$filter["z_STANDAR_RJ"];
+        $this->STANDAR_RJ->AdvancedSearch->SearchCondition = @$filter["v_STANDAR_RJ"];
+        $this->STANDAR_RJ->AdvancedSearch->SearchValue2 = @$filter["y_STANDAR_RJ"];
+        $this->STANDAR_RJ->AdvancedSearch->SearchOperator2 = @$filter["w_STANDAR_RJ"];
+        $this->STANDAR_RJ->AdvancedSearch->save();
+
+        // Field LENGKAP_RJ
+        $this->LENGKAP_RJ->AdvancedSearch->SearchValue = @$filter["x_LENGKAP_RJ"];
+        $this->LENGKAP_RJ->AdvancedSearch->SearchOperator = @$filter["z_LENGKAP_RJ"];
+        $this->LENGKAP_RJ->AdvancedSearch->SearchCondition = @$filter["v_LENGKAP_RJ"];
+        $this->LENGKAP_RJ->AdvancedSearch->SearchValue2 = @$filter["y_LENGKAP_RJ"];
+        $this->LENGKAP_RJ->AdvancedSearch->SearchOperator2 = @$filter["w_LENGKAP_RJ"];
+        $this->LENGKAP_RJ->AdvancedSearch->save();
+
+        // Field LENGKAP_RI
+        $this->LENGKAP_RI->AdvancedSearch->SearchValue = @$filter["x_LENGKAP_RI"];
+        $this->LENGKAP_RI->AdvancedSearch->SearchOperator = @$filter["z_LENGKAP_RI"];
+        $this->LENGKAP_RI->AdvancedSearch->SearchCondition = @$filter["v_LENGKAP_RI"];
+        $this->LENGKAP_RI->AdvancedSearch->SearchValue2 = @$filter["y_LENGKAP_RI"];
+        $this->LENGKAP_RI->AdvancedSearch->SearchOperator2 = @$filter["w_LENGKAP_RI"];
+        $this->LENGKAP_RI->AdvancedSearch->save();
+
+        // Field RESEND_RM_DATE
+        $this->RESEND_RM_DATE->AdvancedSearch->SearchValue = @$filter["x_RESEND_RM_DATE"];
+        $this->RESEND_RM_DATE->AdvancedSearch->SearchOperator = @$filter["z_RESEND_RM_DATE"];
+        $this->RESEND_RM_DATE->AdvancedSearch->SearchCondition = @$filter["v_RESEND_RM_DATE"];
+        $this->RESEND_RM_DATE->AdvancedSearch->SearchValue2 = @$filter["y_RESEND_RM_DATE"];
+        $this->RESEND_RM_DATE->AdvancedSearch->SearchOperator2 = @$filter["w_RESEND_RM_DATE"];
+        $this->RESEND_RM_DATE->AdvancedSearch->save();
+
+        // Field LENGKAP_RM1
+        $this->LENGKAP_RM1->AdvancedSearch->SearchValue = @$filter["x_LENGKAP_RM1"];
+        $this->LENGKAP_RM1->AdvancedSearch->SearchOperator = @$filter["z_LENGKAP_RM1"];
+        $this->LENGKAP_RM1->AdvancedSearch->SearchCondition = @$filter["v_LENGKAP_RM1"];
+        $this->LENGKAP_RM1->AdvancedSearch->SearchValue2 = @$filter["y_LENGKAP_RM1"];
+        $this->LENGKAP_RM1->AdvancedSearch->SearchOperator2 = @$filter["w_LENGKAP_RM1"];
+        $this->LENGKAP_RM1->AdvancedSearch->save();
+
+        // Field LENGKAP_RESUME
+        $this->LENGKAP_RESUME->AdvancedSearch->SearchValue = @$filter["x_LENGKAP_RESUME"];
+        $this->LENGKAP_RESUME->AdvancedSearch->SearchOperator = @$filter["z_LENGKAP_RESUME"];
+        $this->LENGKAP_RESUME->AdvancedSearch->SearchCondition = @$filter["v_LENGKAP_RESUME"];
+        $this->LENGKAP_RESUME->AdvancedSearch->SearchValue2 = @$filter["y_LENGKAP_RESUME"];
+        $this->LENGKAP_RESUME->AdvancedSearch->SearchOperator2 = @$filter["w_LENGKAP_RESUME"];
+        $this->LENGKAP_RESUME->AdvancedSearch->save();
+
+        // Field LENGKAP_ANAMNESIS
+        $this->LENGKAP_ANAMNESIS->AdvancedSearch->SearchValue = @$filter["x_LENGKAP_ANAMNESIS"];
+        $this->LENGKAP_ANAMNESIS->AdvancedSearch->SearchOperator = @$filter["z_LENGKAP_ANAMNESIS"];
+        $this->LENGKAP_ANAMNESIS->AdvancedSearch->SearchCondition = @$filter["v_LENGKAP_ANAMNESIS"];
+        $this->LENGKAP_ANAMNESIS->AdvancedSearch->SearchValue2 = @$filter["y_LENGKAP_ANAMNESIS"];
+        $this->LENGKAP_ANAMNESIS->AdvancedSearch->SearchOperator2 = @$filter["w_LENGKAP_ANAMNESIS"];
+        $this->LENGKAP_ANAMNESIS->AdvancedSearch->save();
+
+        // Field LENGKAP_CONSENT
+        $this->LENGKAP_CONSENT->AdvancedSearch->SearchValue = @$filter["x_LENGKAP_CONSENT"];
+        $this->LENGKAP_CONSENT->AdvancedSearch->SearchOperator = @$filter["z_LENGKAP_CONSENT"];
+        $this->LENGKAP_CONSENT->AdvancedSearch->SearchCondition = @$filter["v_LENGKAP_CONSENT"];
+        $this->LENGKAP_CONSENT->AdvancedSearch->SearchValue2 = @$filter["y_LENGKAP_CONSENT"];
+        $this->LENGKAP_CONSENT->AdvancedSearch->SearchOperator2 = @$filter["w_LENGKAP_CONSENT"];
+        $this->LENGKAP_CONSENT->AdvancedSearch->save();
+
+        // Field LENGKAP_ANESTESI
+        $this->LENGKAP_ANESTESI->AdvancedSearch->SearchValue = @$filter["x_LENGKAP_ANESTESI"];
+        $this->LENGKAP_ANESTESI->AdvancedSearch->SearchOperator = @$filter["z_LENGKAP_ANESTESI"];
+        $this->LENGKAP_ANESTESI->AdvancedSearch->SearchCondition = @$filter["v_LENGKAP_ANESTESI"];
+        $this->LENGKAP_ANESTESI->AdvancedSearch->SearchValue2 = @$filter["y_LENGKAP_ANESTESI"];
+        $this->LENGKAP_ANESTESI->AdvancedSearch->SearchOperator2 = @$filter["w_LENGKAP_ANESTESI"];
+        $this->LENGKAP_ANESTESI->AdvancedSearch->save();
+
+        // Field LENGKAP_OP
+        $this->LENGKAP_OP->AdvancedSearch->SearchValue = @$filter["x_LENGKAP_OP"];
+        $this->LENGKAP_OP->AdvancedSearch->SearchOperator = @$filter["z_LENGKAP_OP"];
+        $this->LENGKAP_OP->AdvancedSearch->SearchCondition = @$filter["v_LENGKAP_OP"];
+        $this->LENGKAP_OP->AdvancedSearch->SearchValue2 = @$filter["y_LENGKAP_OP"];
+        $this->LENGKAP_OP->AdvancedSearch->SearchOperator2 = @$filter["w_LENGKAP_OP"];
+        $this->LENGKAP_OP->AdvancedSearch->save();
+
+        // Field BACK_RM_DATE
+        $this->BACK_RM_DATE->AdvancedSearch->SearchValue = @$filter["x_BACK_RM_DATE"];
+        $this->BACK_RM_DATE->AdvancedSearch->SearchOperator = @$filter["z_BACK_RM_DATE"];
+        $this->BACK_RM_DATE->AdvancedSearch->SearchCondition = @$filter["v_BACK_RM_DATE"];
+        $this->BACK_RM_DATE->AdvancedSearch->SearchValue2 = @$filter["y_BACK_RM_DATE"];
+        $this->BACK_RM_DATE->AdvancedSearch->SearchOperator2 = @$filter["w_BACK_RM_DATE"];
+        $this->BACK_RM_DATE->AdvancedSearch->save();
+
+        // Field VALID_RM_DATE
+        $this->VALID_RM_DATE->AdvancedSearch->SearchValue = @$filter["x_VALID_RM_DATE"];
+        $this->VALID_RM_DATE->AdvancedSearch->SearchOperator = @$filter["z_VALID_RM_DATE"];
+        $this->VALID_RM_DATE->AdvancedSearch->SearchCondition = @$filter["v_VALID_RM_DATE"];
+        $this->VALID_RM_DATE->AdvancedSearch->SearchValue2 = @$filter["y_VALID_RM_DATE"];
+        $this->VALID_RM_DATE->AdvancedSearch->SearchOperator2 = @$filter["w_VALID_RM_DATE"];
+        $this->VALID_RM_DATE->AdvancedSearch->save();
+
+        // Field NO_SKP
+        $this->NO_SKP->AdvancedSearch->SearchValue = @$filter["x_NO_SKP"];
+        $this->NO_SKP->AdvancedSearch->SearchOperator = @$filter["z_NO_SKP"];
+        $this->NO_SKP->AdvancedSearch->SearchCondition = @$filter["v_NO_SKP"];
+        $this->NO_SKP->AdvancedSearch->SearchValue2 = @$filter["y_NO_SKP"];
+        $this->NO_SKP->AdvancedSearch->SearchOperator2 = @$filter["w_NO_SKP"];
+        $this->NO_SKP->AdvancedSearch->save();
+
+        // Field NO_SKPINAP
+        $this->NO_SKPINAP->AdvancedSearch->SearchValue = @$filter["x_NO_SKPINAP"];
+        $this->NO_SKPINAP->AdvancedSearch->SearchOperator = @$filter["z_NO_SKPINAP"];
+        $this->NO_SKPINAP->AdvancedSearch->SearchCondition = @$filter["v_NO_SKPINAP"];
+        $this->NO_SKPINAP->AdvancedSearch->SearchValue2 = @$filter["y_NO_SKPINAP"];
+        $this->NO_SKPINAP->AdvancedSearch->SearchOperator2 = @$filter["w_NO_SKPINAP"];
+        $this->NO_SKPINAP->AdvancedSearch->save();
+
+        // Field DIAGNOSA_ID
+        $this->DIAGNOSA_ID->AdvancedSearch->SearchValue = @$filter["x_DIAGNOSA_ID"];
+        $this->DIAGNOSA_ID->AdvancedSearch->SearchOperator = @$filter["z_DIAGNOSA_ID"];
+        $this->DIAGNOSA_ID->AdvancedSearch->SearchCondition = @$filter["v_DIAGNOSA_ID"];
+        $this->DIAGNOSA_ID->AdvancedSearch->SearchValue2 = @$filter["y_DIAGNOSA_ID"];
+        $this->DIAGNOSA_ID->AdvancedSearch->SearchOperator2 = @$filter["w_DIAGNOSA_ID"];
+        $this->DIAGNOSA_ID->AdvancedSearch->save();
+
+        // Field ticket_all
+        $this->ticket_all->AdvancedSearch->SearchValue = @$filter["x_ticket_all"];
+        $this->ticket_all->AdvancedSearch->SearchOperator = @$filter["z_ticket_all"];
+        $this->ticket_all->AdvancedSearch->SearchCondition = @$filter["v_ticket_all"];
+        $this->ticket_all->AdvancedSearch->SearchValue2 = @$filter["y_ticket_all"];
+        $this->ticket_all->AdvancedSearch->SearchOperator2 = @$filter["w_ticket_all"];
+        $this->ticket_all->AdvancedSearch->save();
+
+        // Field tanggal_rujukan
+        $this->tanggal_rujukan->AdvancedSearch->SearchValue = @$filter["x_tanggal_rujukan"];
+        $this->tanggal_rujukan->AdvancedSearch->SearchOperator = @$filter["z_tanggal_rujukan"];
+        $this->tanggal_rujukan->AdvancedSearch->SearchCondition = @$filter["v_tanggal_rujukan"];
+        $this->tanggal_rujukan->AdvancedSearch->SearchValue2 = @$filter["y_tanggal_rujukan"];
+        $this->tanggal_rujukan->AdvancedSearch->SearchOperator2 = @$filter["w_tanggal_rujukan"];
+        $this->tanggal_rujukan->AdvancedSearch->save();
+
+        // Field ISRJ
+        $this->ISRJ->AdvancedSearch->SearchValue = @$filter["x_ISRJ"];
+        $this->ISRJ->AdvancedSearch->SearchOperator = @$filter["z_ISRJ"];
+        $this->ISRJ->AdvancedSearch->SearchCondition = @$filter["v_ISRJ"];
+        $this->ISRJ->AdvancedSearch->SearchValue2 = @$filter["y_ISRJ"];
+        $this->ISRJ->AdvancedSearch->SearchOperator2 = @$filter["w_ISRJ"];
+        $this->ISRJ->AdvancedSearch->save();
+
+        // Field NORUJUKAN
+        $this->NORUJUKAN->AdvancedSearch->SearchValue = @$filter["x_NORUJUKAN"];
+        $this->NORUJUKAN->AdvancedSearch->SearchOperator = @$filter["z_NORUJUKAN"];
+        $this->NORUJUKAN->AdvancedSearch->SearchCondition = @$filter["v_NORUJUKAN"];
+        $this->NORUJUKAN->AdvancedSearch->SearchValue2 = @$filter["y_NORUJUKAN"];
+        $this->NORUJUKAN->AdvancedSearch->SearchOperator2 = @$filter["w_NORUJUKAN"];
+        $this->NORUJUKAN->AdvancedSearch->save();
+
+        // Field PPKRUJUKAN
+        $this->PPKRUJUKAN->AdvancedSearch->SearchValue = @$filter["x_PPKRUJUKAN"];
+        $this->PPKRUJUKAN->AdvancedSearch->SearchOperator = @$filter["z_PPKRUJUKAN"];
+        $this->PPKRUJUKAN->AdvancedSearch->SearchCondition = @$filter["v_PPKRUJUKAN"];
+        $this->PPKRUJUKAN->AdvancedSearch->SearchValue2 = @$filter["y_PPKRUJUKAN"];
+        $this->PPKRUJUKAN->AdvancedSearch->SearchOperator2 = @$filter["w_PPKRUJUKAN"];
+        $this->PPKRUJUKAN->AdvancedSearch->save();
+
+        // Field LOKASILAKA
+        $this->LOKASILAKA->AdvancedSearch->SearchValue = @$filter["x_LOKASILAKA"];
+        $this->LOKASILAKA->AdvancedSearch->SearchOperator = @$filter["z_LOKASILAKA"];
+        $this->LOKASILAKA->AdvancedSearch->SearchCondition = @$filter["v_LOKASILAKA"];
+        $this->LOKASILAKA->AdvancedSearch->SearchValue2 = @$filter["y_LOKASILAKA"];
+        $this->LOKASILAKA->AdvancedSearch->SearchOperator2 = @$filter["w_LOKASILAKA"];
+        $this->LOKASILAKA->AdvancedSearch->save();
+
+        // Field KDPOLI
+        $this->KDPOLI->AdvancedSearch->SearchValue = @$filter["x_KDPOLI"];
+        $this->KDPOLI->AdvancedSearch->SearchOperator = @$filter["z_KDPOLI"];
+        $this->KDPOLI->AdvancedSearch->SearchCondition = @$filter["v_KDPOLI"];
+        $this->KDPOLI->AdvancedSearch->SearchValue2 = @$filter["y_KDPOLI"];
+        $this->KDPOLI->AdvancedSearch->SearchOperator2 = @$filter["w_KDPOLI"];
+        $this->KDPOLI->AdvancedSearch->save();
+
+        // Field EDIT_SEP
+        $this->EDIT_SEP->AdvancedSearch->SearchValue = @$filter["x_EDIT_SEP"];
+        $this->EDIT_SEP->AdvancedSearch->SearchOperator = @$filter["z_EDIT_SEP"];
+        $this->EDIT_SEP->AdvancedSearch->SearchCondition = @$filter["v_EDIT_SEP"];
+        $this->EDIT_SEP->AdvancedSearch->SearchValue2 = @$filter["y_EDIT_SEP"];
+        $this->EDIT_SEP->AdvancedSearch->SearchOperator2 = @$filter["w_EDIT_SEP"];
+        $this->EDIT_SEP->AdvancedSearch->save();
+
+        // Field DELETE_SEP
+        $this->DELETE_SEP->AdvancedSearch->SearchValue = @$filter["x_DELETE_SEP"];
+        $this->DELETE_SEP->AdvancedSearch->SearchOperator = @$filter["z_DELETE_SEP"];
+        $this->DELETE_SEP->AdvancedSearch->SearchCondition = @$filter["v_DELETE_SEP"];
+        $this->DELETE_SEP->AdvancedSearch->SearchValue2 = @$filter["y_DELETE_SEP"];
+        $this->DELETE_SEP->AdvancedSearch->SearchOperator2 = @$filter["w_DELETE_SEP"];
+        $this->DELETE_SEP->AdvancedSearch->save();
+
+        // Field KODE_AGAMA
+        $this->KODE_AGAMA->AdvancedSearch->SearchValue = @$filter["x_KODE_AGAMA"];
+        $this->KODE_AGAMA->AdvancedSearch->SearchOperator = @$filter["z_KODE_AGAMA"];
+        $this->KODE_AGAMA->AdvancedSearch->SearchCondition = @$filter["v_KODE_AGAMA"];
+        $this->KODE_AGAMA->AdvancedSearch->SearchValue2 = @$filter["y_KODE_AGAMA"];
+        $this->KODE_AGAMA->AdvancedSearch->SearchOperator2 = @$filter["w_KODE_AGAMA"];
+        $this->KODE_AGAMA->AdvancedSearch->save();
+
+        // Field DIAG_AWAL
+        $this->DIAG_AWAL->AdvancedSearch->SearchValue = @$filter["x_DIAG_AWAL"];
+        $this->DIAG_AWAL->AdvancedSearch->SearchOperator = @$filter["z_DIAG_AWAL"];
+        $this->DIAG_AWAL->AdvancedSearch->SearchCondition = @$filter["v_DIAG_AWAL"];
+        $this->DIAG_AWAL->AdvancedSearch->SearchValue2 = @$filter["y_DIAG_AWAL"];
+        $this->DIAG_AWAL->AdvancedSearch->SearchOperator2 = @$filter["w_DIAG_AWAL"];
+        $this->DIAG_AWAL->AdvancedSearch->save();
+
+        // Field AKTIF
+        $this->AKTIF->AdvancedSearch->SearchValue = @$filter["x_AKTIF"];
+        $this->AKTIF->AdvancedSearch->SearchOperator = @$filter["z_AKTIF"];
+        $this->AKTIF->AdvancedSearch->SearchCondition = @$filter["v_AKTIF"];
+        $this->AKTIF->AdvancedSearch->SearchValue2 = @$filter["y_AKTIF"];
+        $this->AKTIF->AdvancedSearch->SearchOperator2 = @$filter["w_AKTIF"];
+        $this->AKTIF->AdvancedSearch->save();
+
+        // Field BILL_INAP
+        $this->BILL_INAP->AdvancedSearch->SearchValue = @$filter["x_BILL_INAP"];
+        $this->BILL_INAP->AdvancedSearch->SearchOperator = @$filter["z_BILL_INAP"];
+        $this->BILL_INAP->AdvancedSearch->SearchCondition = @$filter["v_BILL_INAP"];
+        $this->BILL_INAP->AdvancedSearch->SearchValue2 = @$filter["y_BILL_INAP"];
+        $this->BILL_INAP->AdvancedSearch->SearchOperator2 = @$filter["w_BILL_INAP"];
+        $this->BILL_INAP->AdvancedSearch->save();
+
+        // Field SEP_PRINTDATE
+        $this->SEP_PRINTDATE->AdvancedSearch->SearchValue = @$filter["x_SEP_PRINTDATE"];
+        $this->SEP_PRINTDATE->AdvancedSearch->SearchOperator = @$filter["z_SEP_PRINTDATE"];
+        $this->SEP_PRINTDATE->AdvancedSearch->SearchCondition = @$filter["v_SEP_PRINTDATE"];
+        $this->SEP_PRINTDATE->AdvancedSearch->SearchValue2 = @$filter["y_SEP_PRINTDATE"];
+        $this->SEP_PRINTDATE->AdvancedSearch->SearchOperator2 = @$filter["w_SEP_PRINTDATE"];
+        $this->SEP_PRINTDATE->AdvancedSearch->save();
+
+        // Field MAPPING_SEP
+        $this->MAPPING_SEP->AdvancedSearch->SearchValue = @$filter["x_MAPPING_SEP"];
+        $this->MAPPING_SEP->AdvancedSearch->SearchOperator = @$filter["z_MAPPING_SEP"];
+        $this->MAPPING_SEP->AdvancedSearch->SearchCondition = @$filter["v_MAPPING_SEP"];
+        $this->MAPPING_SEP->AdvancedSearch->SearchValue2 = @$filter["y_MAPPING_SEP"];
+        $this->MAPPING_SEP->AdvancedSearch->SearchOperator2 = @$filter["w_MAPPING_SEP"];
+        $this->MAPPING_SEP->AdvancedSearch->save();
+
+        // Field TRANS_ID
+        $this->TRANS_ID->AdvancedSearch->SearchValue = @$filter["x_TRANS_ID"];
+        $this->TRANS_ID->AdvancedSearch->SearchOperator = @$filter["z_TRANS_ID"];
+        $this->TRANS_ID->AdvancedSearch->SearchCondition = @$filter["v_TRANS_ID"];
+        $this->TRANS_ID->AdvancedSearch->SearchValue2 = @$filter["y_TRANS_ID"];
+        $this->TRANS_ID->AdvancedSearch->SearchOperator2 = @$filter["w_TRANS_ID"];
+        $this->TRANS_ID->AdvancedSearch->save();
+
+        // Field KDPOLI_EKS
+        $this->KDPOLI_EKS->AdvancedSearch->SearchValue = @$filter["x_KDPOLI_EKS"];
+        $this->KDPOLI_EKS->AdvancedSearch->SearchOperator = @$filter["z_KDPOLI_EKS"];
+        $this->KDPOLI_EKS->AdvancedSearch->SearchCondition = @$filter["v_KDPOLI_EKS"];
+        $this->KDPOLI_EKS->AdvancedSearch->SearchValue2 = @$filter["y_KDPOLI_EKS"];
+        $this->KDPOLI_EKS->AdvancedSearch->SearchOperator2 = @$filter["w_KDPOLI_EKS"];
+        $this->KDPOLI_EKS->AdvancedSearch->save();
+
+        // Field COB
+        $this->COB->AdvancedSearch->SearchValue = @$filter["x_COB"];
+        $this->COB->AdvancedSearch->SearchOperator = @$filter["z_COB"];
+        $this->COB->AdvancedSearch->SearchCondition = @$filter["v_COB"];
+        $this->COB->AdvancedSearch->SearchValue2 = @$filter["y_COB"];
+        $this->COB->AdvancedSearch->SearchOperator2 = @$filter["w_COB"];
+        $this->COB->AdvancedSearch->save();
+
+        // Field PENJAMIN
+        $this->PENJAMIN->AdvancedSearch->SearchValue = @$filter["x_PENJAMIN"];
+        $this->PENJAMIN->AdvancedSearch->SearchOperator = @$filter["z_PENJAMIN"];
+        $this->PENJAMIN->AdvancedSearch->SearchCondition = @$filter["v_PENJAMIN"];
+        $this->PENJAMIN->AdvancedSearch->SearchValue2 = @$filter["y_PENJAMIN"];
+        $this->PENJAMIN->AdvancedSearch->SearchOperator2 = @$filter["w_PENJAMIN"];
+        $this->PENJAMIN->AdvancedSearch->save();
+
+        // Field ASALRUJUKAN
+        $this->ASALRUJUKAN->AdvancedSearch->SearchValue = @$filter["x_ASALRUJUKAN"];
+        $this->ASALRUJUKAN->AdvancedSearch->SearchOperator = @$filter["z_ASALRUJUKAN"];
+        $this->ASALRUJUKAN->AdvancedSearch->SearchCondition = @$filter["v_ASALRUJUKAN"];
+        $this->ASALRUJUKAN->AdvancedSearch->SearchValue2 = @$filter["y_ASALRUJUKAN"];
+        $this->ASALRUJUKAN->AdvancedSearch->SearchOperator2 = @$filter["w_ASALRUJUKAN"];
+        $this->ASALRUJUKAN->AdvancedSearch->save();
+
+        // Field RESPONSEP
+        $this->RESPONSEP->AdvancedSearch->SearchValue = @$filter["x_RESPONSEP"];
+        $this->RESPONSEP->AdvancedSearch->SearchOperator = @$filter["z_RESPONSEP"];
+        $this->RESPONSEP->AdvancedSearch->SearchCondition = @$filter["v_RESPONSEP"];
+        $this->RESPONSEP->AdvancedSearch->SearchValue2 = @$filter["y_RESPONSEP"];
+        $this->RESPONSEP->AdvancedSearch->SearchOperator2 = @$filter["w_RESPONSEP"];
+        $this->RESPONSEP->AdvancedSearch->save();
+
+        // Field APPROVAL_DESC
+        $this->APPROVAL_DESC->AdvancedSearch->SearchValue = @$filter["x_APPROVAL_DESC"];
+        $this->APPROVAL_DESC->AdvancedSearch->SearchOperator = @$filter["z_APPROVAL_DESC"];
+        $this->APPROVAL_DESC->AdvancedSearch->SearchCondition = @$filter["v_APPROVAL_DESC"];
+        $this->APPROVAL_DESC->AdvancedSearch->SearchValue2 = @$filter["y_APPROVAL_DESC"];
+        $this->APPROVAL_DESC->AdvancedSearch->SearchOperator2 = @$filter["w_APPROVAL_DESC"];
+        $this->APPROVAL_DESC->AdvancedSearch->save();
+
+        // Field APPROVAL_RESPONAJUKAN
+        $this->APPROVAL_RESPONAJUKAN->AdvancedSearch->SearchValue = @$filter["x_APPROVAL_RESPONAJUKAN"];
+        $this->APPROVAL_RESPONAJUKAN->AdvancedSearch->SearchOperator = @$filter["z_APPROVAL_RESPONAJUKAN"];
+        $this->APPROVAL_RESPONAJUKAN->AdvancedSearch->SearchCondition = @$filter["v_APPROVAL_RESPONAJUKAN"];
+        $this->APPROVAL_RESPONAJUKAN->AdvancedSearch->SearchValue2 = @$filter["y_APPROVAL_RESPONAJUKAN"];
+        $this->APPROVAL_RESPONAJUKAN->AdvancedSearch->SearchOperator2 = @$filter["w_APPROVAL_RESPONAJUKAN"];
+        $this->APPROVAL_RESPONAJUKAN->AdvancedSearch->save();
+
+        // Field APPROVAL_RESPONAPPROV
+        $this->APPROVAL_RESPONAPPROV->AdvancedSearch->SearchValue = @$filter["x_APPROVAL_RESPONAPPROV"];
+        $this->APPROVAL_RESPONAPPROV->AdvancedSearch->SearchOperator = @$filter["z_APPROVAL_RESPONAPPROV"];
+        $this->APPROVAL_RESPONAPPROV->AdvancedSearch->SearchCondition = @$filter["v_APPROVAL_RESPONAPPROV"];
+        $this->APPROVAL_RESPONAPPROV->AdvancedSearch->SearchValue2 = @$filter["y_APPROVAL_RESPONAPPROV"];
+        $this->APPROVAL_RESPONAPPROV->AdvancedSearch->SearchOperator2 = @$filter["w_APPROVAL_RESPONAPPROV"];
+        $this->APPROVAL_RESPONAPPROV->AdvancedSearch->save();
+
+        // Field RESPONTGLPLG_DESC
+        $this->RESPONTGLPLG_DESC->AdvancedSearch->SearchValue = @$filter["x_RESPONTGLPLG_DESC"];
+        $this->RESPONTGLPLG_DESC->AdvancedSearch->SearchOperator = @$filter["z_RESPONTGLPLG_DESC"];
+        $this->RESPONTGLPLG_DESC->AdvancedSearch->SearchCondition = @$filter["v_RESPONTGLPLG_DESC"];
+        $this->RESPONTGLPLG_DESC->AdvancedSearch->SearchValue2 = @$filter["y_RESPONTGLPLG_DESC"];
+        $this->RESPONTGLPLG_DESC->AdvancedSearch->SearchOperator2 = @$filter["w_RESPONTGLPLG_DESC"];
+        $this->RESPONTGLPLG_DESC->AdvancedSearch->save();
+
+        // Field RESPONPOST_VKLAIM
+        $this->RESPONPOST_VKLAIM->AdvancedSearch->SearchValue = @$filter["x_RESPONPOST_VKLAIM"];
+        $this->RESPONPOST_VKLAIM->AdvancedSearch->SearchOperator = @$filter["z_RESPONPOST_VKLAIM"];
+        $this->RESPONPOST_VKLAIM->AdvancedSearch->SearchCondition = @$filter["v_RESPONPOST_VKLAIM"];
+        $this->RESPONPOST_VKLAIM->AdvancedSearch->SearchValue2 = @$filter["y_RESPONPOST_VKLAIM"];
+        $this->RESPONPOST_VKLAIM->AdvancedSearch->SearchOperator2 = @$filter["w_RESPONPOST_VKLAIM"];
+        $this->RESPONPOST_VKLAIM->AdvancedSearch->save();
+
+        // Field RESPONPUT_VKLAIM
+        $this->RESPONPUT_VKLAIM->AdvancedSearch->SearchValue = @$filter["x_RESPONPUT_VKLAIM"];
+        $this->RESPONPUT_VKLAIM->AdvancedSearch->SearchOperator = @$filter["z_RESPONPUT_VKLAIM"];
+        $this->RESPONPUT_VKLAIM->AdvancedSearch->SearchCondition = @$filter["v_RESPONPUT_VKLAIM"];
+        $this->RESPONPUT_VKLAIM->AdvancedSearch->SearchValue2 = @$filter["y_RESPONPUT_VKLAIM"];
+        $this->RESPONPUT_VKLAIM->AdvancedSearch->SearchOperator2 = @$filter["w_RESPONPUT_VKLAIM"];
+        $this->RESPONPUT_VKLAIM->AdvancedSearch->save();
+
+        // Field RESPONDEL_VKLAIM
+        $this->RESPONDEL_VKLAIM->AdvancedSearch->SearchValue = @$filter["x_RESPONDEL_VKLAIM"];
+        $this->RESPONDEL_VKLAIM->AdvancedSearch->SearchOperator = @$filter["z_RESPONDEL_VKLAIM"];
+        $this->RESPONDEL_VKLAIM->AdvancedSearch->SearchCondition = @$filter["v_RESPONDEL_VKLAIM"];
+        $this->RESPONDEL_VKLAIM->AdvancedSearch->SearchValue2 = @$filter["y_RESPONDEL_VKLAIM"];
+        $this->RESPONDEL_VKLAIM->AdvancedSearch->SearchOperator2 = @$filter["w_RESPONDEL_VKLAIM"];
+        $this->RESPONDEL_VKLAIM->AdvancedSearch->save();
+
+        // Field CALL_TIMES
+        $this->CALL_TIMES->AdvancedSearch->SearchValue = @$filter["x_CALL_TIMES"];
+        $this->CALL_TIMES->AdvancedSearch->SearchOperator = @$filter["z_CALL_TIMES"];
+        $this->CALL_TIMES->AdvancedSearch->SearchCondition = @$filter["v_CALL_TIMES"];
+        $this->CALL_TIMES->AdvancedSearch->SearchValue2 = @$filter["y_CALL_TIMES"];
+        $this->CALL_TIMES->AdvancedSearch->SearchOperator2 = @$filter["w_CALL_TIMES"];
+        $this->CALL_TIMES->AdvancedSearch->save();
+
+        // Field CALL_DATE
+        $this->CALL_DATE->AdvancedSearch->SearchValue = @$filter["x_CALL_DATE"];
+        $this->CALL_DATE->AdvancedSearch->SearchOperator = @$filter["z_CALL_DATE"];
+        $this->CALL_DATE->AdvancedSearch->SearchCondition = @$filter["v_CALL_DATE"];
+        $this->CALL_DATE->AdvancedSearch->SearchValue2 = @$filter["y_CALL_DATE"];
+        $this->CALL_DATE->AdvancedSearch->SearchOperator2 = @$filter["w_CALL_DATE"];
+        $this->CALL_DATE->AdvancedSearch->save();
+
+        // Field CALL_DATES
+        $this->CALL_DATES->AdvancedSearch->SearchValue = @$filter["x_CALL_DATES"];
+        $this->CALL_DATES->AdvancedSearch->SearchOperator = @$filter["z_CALL_DATES"];
+        $this->CALL_DATES->AdvancedSearch->SearchCondition = @$filter["v_CALL_DATES"];
+        $this->CALL_DATES->AdvancedSearch->SearchValue2 = @$filter["y_CALL_DATES"];
+        $this->CALL_DATES->AdvancedSearch->SearchOperator2 = @$filter["w_CALL_DATES"];
+        $this->CALL_DATES->AdvancedSearch->save();
+
+        // Field SERVED_DATE
+        $this->SERVED_DATE->AdvancedSearch->SearchValue = @$filter["x_SERVED_DATE"];
+        $this->SERVED_DATE->AdvancedSearch->SearchOperator = @$filter["z_SERVED_DATE"];
+        $this->SERVED_DATE->AdvancedSearch->SearchCondition = @$filter["v_SERVED_DATE"];
+        $this->SERVED_DATE->AdvancedSearch->SearchValue2 = @$filter["y_SERVED_DATE"];
+        $this->SERVED_DATE->AdvancedSearch->SearchOperator2 = @$filter["w_SERVED_DATE"];
+        $this->SERVED_DATE->AdvancedSearch->save();
+
+        // Field SERVED_INAP
+        $this->SERVED_INAP->AdvancedSearch->SearchValue = @$filter["x_SERVED_INAP"];
+        $this->SERVED_INAP->AdvancedSearch->SearchOperator = @$filter["z_SERVED_INAP"];
+        $this->SERVED_INAP->AdvancedSearch->SearchCondition = @$filter["v_SERVED_INAP"];
+        $this->SERVED_INAP->AdvancedSearch->SearchValue2 = @$filter["y_SERVED_INAP"];
+        $this->SERVED_INAP->AdvancedSearch->SearchOperator2 = @$filter["w_SERVED_INAP"];
+        $this->SERVED_INAP->AdvancedSearch->save();
+
+        // Field KDDPJP1
+        $this->KDDPJP1->AdvancedSearch->SearchValue = @$filter["x_KDDPJP1"];
+        $this->KDDPJP1->AdvancedSearch->SearchOperator = @$filter["z_KDDPJP1"];
+        $this->KDDPJP1->AdvancedSearch->SearchCondition = @$filter["v_KDDPJP1"];
+        $this->KDDPJP1->AdvancedSearch->SearchValue2 = @$filter["y_KDDPJP1"];
+        $this->KDDPJP1->AdvancedSearch->SearchOperator2 = @$filter["w_KDDPJP1"];
+        $this->KDDPJP1->AdvancedSearch->save();
+
+        // Field KDDPJP
+        $this->KDDPJP->AdvancedSearch->SearchValue = @$filter["x_KDDPJP"];
+        $this->KDDPJP->AdvancedSearch->SearchOperator = @$filter["z_KDDPJP"];
+        $this->KDDPJP->AdvancedSearch->SearchCondition = @$filter["v_KDDPJP"];
+        $this->KDDPJP->AdvancedSearch->SearchValue2 = @$filter["y_KDDPJP"];
+        $this->KDDPJP->AdvancedSearch->SearchOperator2 = @$filter["w_KDDPJP"];
+        $this->KDDPJP->AdvancedSearch->save();
+
+        // Field IDXDAFTAR
+        $this->IDXDAFTAR->AdvancedSearch->SearchValue = @$filter["x_IDXDAFTAR"];
+        $this->IDXDAFTAR->AdvancedSearch->SearchOperator = @$filter["z_IDXDAFTAR"];
+        $this->IDXDAFTAR->AdvancedSearch->SearchCondition = @$filter["v_IDXDAFTAR"];
+        $this->IDXDAFTAR->AdvancedSearch->SearchValue2 = @$filter["y_IDXDAFTAR"];
+        $this->IDXDAFTAR->AdvancedSearch->SearchOperator2 = @$filter["w_IDXDAFTAR"];
+        $this->IDXDAFTAR->AdvancedSearch->save();
+
+        // Field tgl_kontrol
+        $this->tgl_kontrol->AdvancedSearch->SearchValue = @$filter["x_tgl_kontrol"];
+        $this->tgl_kontrol->AdvancedSearch->SearchOperator = @$filter["z_tgl_kontrol"];
+        $this->tgl_kontrol->AdvancedSearch->SearchCondition = @$filter["v_tgl_kontrol"];
+        $this->tgl_kontrol->AdvancedSearch->SearchValue2 = @$filter["y_tgl_kontrol"];
+        $this->tgl_kontrol->AdvancedSearch->SearchOperator2 = @$filter["w_tgl_kontrol"];
+        $this->tgl_kontrol->AdvancedSearch->save();
+        $this->BasicSearch->setKeyword(@$filter[Config("TABLE_BASIC_SEARCH")]);
+        $this->BasicSearch->setType(@$filter[Config("TABLE_BASIC_SEARCH_TYPE")]);
+    }
+
+    // Return basic search SQL
+    protected function basicSearchSql($arKeywords, $type)
+    {
+        $where = "";
+        $this->buildBasicSearchSql($where, $this->ORG_UNIT_CODE, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->NO_REGISTRATION, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->VISIT_ID, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->ADDRESS_OF_RUJUKAN, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->ISNEW, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->CLINIC_ID, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->CLINIC_ID_FROM, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->CLASS_ROOM_ID, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->DIANTAR_OLEH, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->GENDER, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->DESCRIPTION, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->VISITOR_ADDRESS, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->MODIFIED_BY, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->MODIFIED_FROM, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->EMPLOYEE_ID, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->EMPLOYEE_ID_FROM, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->RESPONSIBLE, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->ISATTENDED, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->PAYOR_ID, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->ISPERTARIF, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->KAL_ID, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->EMPLOYEE_INAP, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->PASIEN_ID, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->KARYAWAN, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->ACCOUNT_ID, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->BACKCHARGE, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->RECOMENDATION, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->CONCLUSION, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->SPECIMENNO, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->LOCKED, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->STANDAR_RJ, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->LENGKAP_RJ, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->LENGKAP_RI, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->LENGKAP_RM1, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->LENGKAP_RESUME, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->LENGKAP_ANAMNESIS, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->LENGKAP_CONSENT, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->LENGKAP_ANESTESI, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->LENGKAP_OP, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->NO_SKP, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->NO_SKPINAP, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->DIAGNOSA_ID, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->ISRJ, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->NORUJUKAN, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->PPKRUJUKAN, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->LOKASILAKA, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->KDPOLI, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->EDIT_SEP, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->DELETE_SEP, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->DIAG_AWAL, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->AKTIF, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->BILL_INAP, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->MAPPING_SEP, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->TRANS_ID, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->KDPOLI_EKS, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->COB, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->PENJAMIN, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->ASALRUJUKAN, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->RESPONSEP, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->APPROVAL_DESC, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->APPROVAL_RESPONAJUKAN, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->APPROVAL_RESPONAPPROV, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->RESPONTGLPLG_DESC, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->RESPONPOST_VKLAIM, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->RESPONPUT_VKLAIM, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->RESPONDEL_VKLAIM, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->KDDPJP1, $arKeywords, $type);
+        $this->buildBasicSearchSql($where, $this->KDDPJP, $arKeywords, $type);
+        return $where;
+    }
+
+    // Build basic search SQL
+    protected function buildBasicSearchSql(&$where, &$fld, $arKeywords, $type)
+    {
+        $defCond = ($type == "OR") ? "OR" : "AND";
+        $arSql = []; // Array for SQL parts
+        $arCond = []; // Array for search conditions
+        $cnt = count($arKeywords);
+        $j = 0; // Number of SQL parts
+        for ($i = 0; $i < $cnt; $i++) {
+            $keyword = $arKeywords[$i];
+            $keyword = trim($keyword);
+            if (Config("BASIC_SEARCH_IGNORE_PATTERN") != "") {
+                $keyword = preg_replace(Config("BASIC_SEARCH_IGNORE_PATTERN"), "\\", $keyword);
+                $ar = explode("\\", $keyword);
+            } else {
+                $ar = [$keyword];
+            }
+            foreach ($ar as $keyword) {
+                if ($keyword != "") {
+                    $wrk = "";
+                    if ($keyword == "OR" && $type == "") {
+                        if ($j > 0) {
+                            $arCond[$j - 1] = "OR";
+                        }
+                    } elseif ($keyword == Config("NULL_VALUE")) {
+                        $wrk = $fld->Expression . " IS NULL";
+                    } elseif ($keyword == Config("NOT_NULL_VALUE")) {
+                        $wrk = $fld->Expression . " IS NOT NULL";
+                    } elseif ($fld->IsVirtual && $fld->Visible) {
+                        $wrk = $fld->VirtualExpression . Like(QuotedValue("%" . $keyword . "%", DATATYPE_STRING, $this->Dbid), $this->Dbid);
+                    } elseif ($fld->DataType != DATATYPE_NUMBER || is_numeric($keyword)) {
+                        $wrk = $fld->BasicSearchExpression . Like(QuotedValue("%" . $keyword . "%", DATATYPE_STRING, $this->Dbid), $this->Dbid);
+                    }
+                    if ($wrk != "") {
+                        $arSql[$j] = $wrk;
+                        $arCond[$j] = $defCond;
+                        $j += 1;
+                    }
+                }
+            }
+        }
+        $cnt = count($arSql);
+        $quoted = false;
+        $sql = "";
+        if ($cnt > 0) {
+            for ($i = 0; $i < $cnt - 1; $i++) {
+                if ($arCond[$i] == "OR") {
+                    if (!$quoted) {
+                        $sql .= "(";
+                    }
+                    $quoted = true;
+                }
+                $sql .= $arSql[$i];
+                if ($quoted && $arCond[$i] != "OR") {
+                    $sql .= ")";
+                    $quoted = false;
+                }
+                $sql .= " " . $arCond[$i] . " ";
+            }
+            $sql .= $arSql[$cnt - 1];
+            if ($quoted) {
+                $sql .= ")";
+            }
+        }
+        if ($sql != "") {
+            if ($where != "") {
+                $where .= " OR ";
+            }
+            $where .= "(" . $sql . ")";
+        }
+    }
+
+    // Return basic search WHERE clause based on search keyword and type
+    protected function basicSearchWhere($default = false)
+    {
+        global $Security;
+        $searchStr = "";
+        if (!$Security->canSearch()) {
+            return "";
+        }
+        $searchKeyword = ($default) ? $this->BasicSearch->KeywordDefault : $this->BasicSearch->Keyword;
+        $searchType = ($default) ? $this->BasicSearch->TypeDefault : $this->BasicSearch->Type;
+
+        // Get search SQL
+        if ($searchKeyword != "") {
+            $ar = $this->BasicSearch->keywordList($default);
+            // Search keyword in any fields
+            if (($searchType == "OR" || $searchType == "AND") && $this->BasicSearch->BasicSearchAnyFields) {
+                foreach ($ar as $keyword) {
+                    if ($keyword != "") {
+                        if ($searchStr != "") {
+                            $searchStr .= " " . $searchType . " ";
+                        }
+                        $searchStr .= "(" . $this->basicSearchSql([$keyword], $searchType) . ")";
+                    }
+                }
+            } else {
+                $searchStr = $this->basicSearchSql($ar, $searchType);
+            }
+            if (!$default && in_array($this->Command, ["", "reset", "resetall"])) {
+                $this->Command = "search";
+            }
+        }
+        if (!$default && $this->Command == "search") {
+            $this->BasicSearch->setKeyword($searchKeyword);
+            $this->BasicSearch->setType($searchType);
+        }
+        return $searchStr;
+    }
+
+    // Check if search parm exists
+    protected function checkSearchParms()
+    {
+        // Check basic search
+        if ($this->BasicSearch->issetSession()) {
+            return true;
+        }
+        return false;
+    }
+
+    // Clear all search parameters
+    protected function resetSearchParms()
+    {
+        // Clear search WHERE clause
+        $this->SearchWhere = "";
+        $this->setSearchWhere($this->SearchWhere);
+
+        // Clear basic search parameters
+        $this->resetBasicSearchParms();
+    }
+
+    // Load advanced search default values
+    protected function loadAdvancedSearchDefault()
+    {
+        return false;
+    }
+
+    // Clear all basic search parameters
+    protected function resetBasicSearchParms()
+    {
+        $this->BasicSearch->unsetSession();
+    }
+
+    // Restore all search parameters
+    protected function restoreSearchParms()
+    {
+        $this->RestoreSearch = true;
+
+        // Restore basic search values
+        $this->BasicSearch->load();
+    }
+
+    // Set up sort parameters
+    protected function setupSortOrder()
+    {
+        // Check for "order" parameter
+        if (Get("order") !== null) {
+            $this->CurrentOrder = Get("order");
+            $this->CurrentOrderType = Get("ordertype", "");
+            $this->updateSort($this->ORG_UNIT_CODE); // ORG_UNIT_CODE
+            $this->updateSort($this->NO_REGISTRATION); // NO_REGISTRATION
+            $this->updateSort($this->VISIT_ID); // VISIT_ID
+            $this->updateSort($this->STATUS_PASIEN_ID); // STATUS_PASIEN_ID
+            $this->updateSort($this->RUJUKAN_ID); // RUJUKAN_ID
+            $this->updateSort($this->ADDRESS_OF_RUJUKAN); // ADDRESS_OF_RUJUKAN
+            $this->updateSort($this->REASON_ID); // REASON_ID
+            $this->updateSort($this->WAY_ID); // WAY_ID
+            $this->updateSort($this->PATIENT_CATEGORY_ID); // PATIENT_CATEGORY_ID
+            $this->updateSort($this->BOOKED_DATE); // BOOKED_DATE
+            $this->updateSort($this->VISIT_DATE); // VISIT_DATE
+            $this->updateSort($this->ISNEW); // ISNEW
+            $this->updateSort($this->FOLLOW_UP); // FOLLOW_UP
+            $this->updateSort($this->PLACE_TYPE); // PLACE_TYPE
+            $this->updateSort($this->CLINIC_ID); // CLINIC_ID
+            $this->updateSort($this->CLINIC_ID_FROM); // CLINIC_ID_FROM
+            $this->updateSort($this->CLASS_ROOM_ID); // CLASS_ROOM_ID
+            $this->updateSort($this->BED_ID); // BED_ID
+            $this->updateSort($this->KELUAR_ID); // KELUAR_ID
+            $this->updateSort($this->IN_DATE); // IN_DATE
+            $this->updateSort($this->EXIT_DATE); // EXIT_DATE
+            $this->updateSort($this->DIANTAR_OLEH); // DIANTAR_OLEH
+            $this->updateSort($this->GENDER); // GENDER
+            $this->updateSort($this->DESCRIPTION); // DESCRIPTION
+            $this->updateSort($this->VISITOR_ADDRESS); // VISITOR_ADDRESS
+            $this->updateSort($this->MODIFIED_BY); // MODIFIED_BY
+            $this->updateSort($this->MODIFIED_DATE); // MODIFIED_DATE
+            $this->updateSort($this->MODIFIED_FROM); // MODIFIED_FROM
+            $this->updateSort($this->EMPLOYEE_ID); // EMPLOYEE_ID
+            $this->updateSort($this->EMPLOYEE_ID_FROM); // EMPLOYEE_ID_FROM
+            $this->updateSort($this->RESPONSIBLE_ID); // RESPONSIBLE_ID
+            $this->updateSort($this->RESPONSIBLE); // RESPONSIBLE
+            $this->updateSort($this->FAMILY_STATUS_ID); // FAMILY_STATUS_ID
+            $this->updateSort($this->TICKET_NO); // TICKET_NO
+            $this->updateSort($this->ISATTENDED); // ISATTENDED
+            $this->updateSort($this->PAYOR_ID); // PAYOR_ID
+            $this->updateSort($this->CLASS_ID); // CLASS_ID
+            $this->updateSort($this->ISPERTARIF); // ISPERTARIF
+            $this->updateSort($this->KAL_ID); // KAL_ID
+            $this->updateSort($this->EMPLOYEE_INAP); // EMPLOYEE_INAP
+            $this->updateSort($this->PASIEN_ID); // PASIEN_ID
+            $this->updateSort($this->KARYAWAN); // KARYAWAN
+            $this->updateSort($this->ACCOUNT_ID); // ACCOUNT_ID
+            $this->updateSort($this->CLASS_ID_PLAFOND); // CLASS_ID_PLAFOND
+            $this->updateSort($this->BACKCHARGE); // BACKCHARGE
+            $this->updateSort($this->COVERAGE_ID); // COVERAGE_ID
+            $this->updateSort($this->AGEYEAR); // AGEYEAR
+            $this->updateSort($this->AGEMONTH); // AGEMONTH
+            $this->updateSort($this->AGEDAY); // AGEDAY
+            $this->updateSort($this->RECOMENDATION); // RECOMENDATION
+            $this->updateSort($this->CONCLUSION); // CONCLUSION
+            $this->updateSort($this->SPECIMENNO); // SPECIMENNO
+            $this->updateSort($this->LOCKED); // LOCKED
+            $this->updateSort($this->RM_OUT_DATE); // RM_OUT_DATE
+            $this->updateSort($this->RM_IN_DATE); // RM_IN_DATE
+            $this->updateSort($this->LAMA_PINJAM); // LAMA_PINJAM
+            $this->updateSort($this->STANDAR_RJ); // STANDAR_RJ
+            $this->updateSort($this->LENGKAP_RJ); // LENGKAP_RJ
+            $this->updateSort($this->LENGKAP_RI); // LENGKAP_RI
+            $this->updateSort($this->RESEND_RM_DATE); // RESEND_RM_DATE
+            $this->updateSort($this->LENGKAP_RM1); // LENGKAP_RM1
+            $this->updateSort($this->LENGKAP_RESUME); // LENGKAP_RESUME
+            $this->updateSort($this->LENGKAP_ANAMNESIS); // LENGKAP_ANAMNESIS
+            $this->updateSort($this->LENGKAP_CONSENT); // LENGKAP_CONSENT
+            $this->updateSort($this->LENGKAP_ANESTESI); // LENGKAP_ANESTESI
+            $this->updateSort($this->LENGKAP_OP); // LENGKAP_OP
+            $this->updateSort($this->BACK_RM_DATE); // BACK_RM_DATE
+            $this->updateSort($this->VALID_RM_DATE); // VALID_RM_DATE
+            $this->updateSort($this->NO_SKP); // NO_SKP
+            $this->updateSort($this->NO_SKPINAP); // NO_SKPINAP
+            $this->updateSort($this->DIAGNOSA_ID); // DIAGNOSA_ID
+            $this->updateSort($this->ticket_all); // ticket_all
+            $this->updateSort($this->tanggal_rujukan); // tanggal_rujukan
+            $this->updateSort($this->ISRJ); // ISRJ
+            $this->updateSort($this->NORUJUKAN); // NORUJUKAN
+            $this->updateSort($this->PPKRUJUKAN); // PPKRUJUKAN
+            $this->updateSort($this->LOKASILAKA); // LOKASILAKA
+            $this->updateSort($this->KDPOLI); // KDPOLI
+            $this->updateSort($this->EDIT_SEP); // EDIT_SEP
+            $this->updateSort($this->DELETE_SEP); // DELETE_SEP
+            $this->updateSort($this->KODE_AGAMA); // KODE_AGAMA
+            $this->updateSort($this->DIAG_AWAL); // DIAG_AWAL
+            $this->updateSort($this->AKTIF); // AKTIF
+            $this->updateSort($this->BILL_INAP); // BILL_INAP
+            $this->updateSort($this->SEP_PRINTDATE); // SEP_PRINTDATE
+            $this->updateSort($this->MAPPING_SEP); // MAPPING_SEP
+            $this->updateSort($this->TRANS_ID); // TRANS_ID
+            $this->updateSort($this->KDPOLI_EKS); // KDPOLI_EKS
+            $this->updateSort($this->COB); // COB
+            $this->updateSort($this->PENJAMIN); // PENJAMIN
+            $this->updateSort($this->ASALRUJUKAN); // ASALRUJUKAN
+            $this->updateSort($this->RESPONSEP); // RESPONSEP
+            $this->updateSort($this->APPROVAL_DESC); // APPROVAL_DESC
+            $this->updateSort($this->APPROVAL_RESPONAJUKAN); // APPROVAL_RESPONAJUKAN
+            $this->updateSort($this->APPROVAL_RESPONAPPROV); // APPROVAL_RESPONAPPROV
+            $this->updateSort($this->RESPONTGLPLG_DESC); // RESPONTGLPLG_DESC
+            $this->updateSort($this->RESPONPOST_VKLAIM); // RESPONPOST_VKLAIM
+            $this->updateSort($this->RESPONPUT_VKLAIM); // RESPONPUT_VKLAIM
+            $this->updateSort($this->RESPONDEL_VKLAIM); // RESPONDEL_VKLAIM
+            $this->updateSort($this->CALL_TIMES); // CALL_TIMES
+            $this->updateSort($this->CALL_DATE); // CALL_DATE
+            $this->updateSort($this->CALL_DATES); // CALL_DATES
+            $this->updateSort($this->SERVED_DATE); // SERVED_DATE
+            $this->updateSort($this->SERVED_INAP); // SERVED_INAP
+            $this->updateSort($this->KDDPJP1); // KDDPJP1
+            $this->updateSort($this->KDDPJP); // KDDPJP
+            $this->updateSort($this->IDXDAFTAR); // IDXDAFTAR
+            $this->updateSort($this->tgl_kontrol); // tgl_kontrol
+            $this->setStartRecordNumber(1); // Reset start position
+        }
+    }
+
+    // Load sort order parameters
+    protected function loadSortOrder()
+    {
+        $orderBy = $this->getSessionOrderBy(); // Get ORDER BY from Session
+        if ($orderBy == "") {
+            $this->DefaultSort = "";
+            if ($this->getSqlOrderBy() != "") {
+                $useDefaultSort = true;
+                if ($useDefaultSort) {
+                    $orderBy = $this->getSqlOrderBy();
+                    $this->setSessionOrderBy($orderBy);
+                } else {
+                    $this->setSessionOrderBy("");
+                }
+            }
+        }
+    }
+
+    // Reset command
+    // - cmd=reset (Reset search parameters)
+    // - cmd=resetall (Reset search and master/detail parameters)
+    // - cmd=resetsort (Reset sort parameters)
+    protected function resetCmd()
+    {
+        // Check if reset command
+        if (StartsString("reset", $this->Command)) {
+            // Reset search criteria
+            if ($this->Command == "reset" || $this->Command == "resetall") {
+                $this->resetSearchParms();
+            }
+
+            // Reset (clear) sorting order
+            if ($this->Command == "resetsort") {
+                $orderBy = "";
+                $this->setSessionOrderBy($orderBy);
+                $this->ORG_UNIT_CODE->setSort("");
+                $this->NO_REGISTRATION->setSort("");
+                $this->VISIT_ID->setSort("");
+                $this->STATUS_PASIEN_ID->setSort("");
+                $this->RUJUKAN_ID->setSort("");
+                $this->ADDRESS_OF_RUJUKAN->setSort("");
+                $this->REASON_ID->setSort("");
+                $this->WAY_ID->setSort("");
+                $this->PATIENT_CATEGORY_ID->setSort("");
+                $this->BOOKED_DATE->setSort("");
+                $this->VISIT_DATE->setSort("");
+                $this->ISNEW->setSort("");
+                $this->FOLLOW_UP->setSort("");
+                $this->PLACE_TYPE->setSort("");
+                $this->CLINIC_ID->setSort("");
+                $this->CLINIC_ID_FROM->setSort("");
+                $this->CLASS_ROOM_ID->setSort("");
+                $this->BED_ID->setSort("");
+                $this->KELUAR_ID->setSort("");
+                $this->IN_DATE->setSort("");
+                $this->EXIT_DATE->setSort("");
+                $this->DIANTAR_OLEH->setSort("");
+                $this->GENDER->setSort("");
+                $this->DESCRIPTION->setSort("");
+                $this->VISITOR_ADDRESS->setSort("");
+                $this->MODIFIED_BY->setSort("");
+                $this->MODIFIED_DATE->setSort("");
+                $this->MODIFIED_FROM->setSort("");
+                $this->EMPLOYEE_ID->setSort("");
+                $this->EMPLOYEE_ID_FROM->setSort("");
+                $this->RESPONSIBLE_ID->setSort("");
+                $this->RESPONSIBLE->setSort("");
+                $this->FAMILY_STATUS_ID->setSort("");
+                $this->TICKET_NO->setSort("");
+                $this->ISATTENDED->setSort("");
+                $this->PAYOR_ID->setSort("");
+                $this->CLASS_ID->setSort("");
+                $this->ISPERTARIF->setSort("");
+                $this->KAL_ID->setSort("");
+                $this->EMPLOYEE_INAP->setSort("");
+                $this->PASIEN_ID->setSort("");
+                $this->KARYAWAN->setSort("");
+                $this->ACCOUNT_ID->setSort("");
+                $this->CLASS_ID_PLAFOND->setSort("");
+                $this->BACKCHARGE->setSort("");
+                $this->COVERAGE_ID->setSort("");
+                $this->AGEYEAR->setSort("");
+                $this->AGEMONTH->setSort("");
+                $this->AGEDAY->setSort("");
+                $this->RECOMENDATION->setSort("");
+                $this->CONCLUSION->setSort("");
+                $this->SPECIMENNO->setSort("");
+                $this->LOCKED->setSort("");
+                $this->RM_OUT_DATE->setSort("");
+                $this->RM_IN_DATE->setSort("");
+                $this->LAMA_PINJAM->setSort("");
+                $this->STANDAR_RJ->setSort("");
+                $this->LENGKAP_RJ->setSort("");
+                $this->LENGKAP_RI->setSort("");
+                $this->RESEND_RM_DATE->setSort("");
+                $this->LENGKAP_RM1->setSort("");
+                $this->LENGKAP_RESUME->setSort("");
+                $this->LENGKAP_ANAMNESIS->setSort("");
+                $this->LENGKAP_CONSENT->setSort("");
+                $this->LENGKAP_ANESTESI->setSort("");
+                $this->LENGKAP_OP->setSort("");
+                $this->BACK_RM_DATE->setSort("");
+                $this->VALID_RM_DATE->setSort("");
+                $this->NO_SKP->setSort("");
+                $this->NO_SKPINAP->setSort("");
+                $this->DIAGNOSA_ID->setSort("");
+                $this->ticket_all->setSort("");
+                $this->tanggal_rujukan->setSort("");
+                $this->ISRJ->setSort("");
+                $this->NORUJUKAN->setSort("");
+                $this->PPKRUJUKAN->setSort("");
+                $this->LOKASILAKA->setSort("");
+                $this->KDPOLI->setSort("");
+                $this->EDIT_SEP->setSort("");
+                $this->DELETE_SEP->setSort("");
+                $this->KODE_AGAMA->setSort("");
+                $this->DIAG_AWAL->setSort("");
+                $this->AKTIF->setSort("");
+                $this->BILL_INAP->setSort("");
+                $this->SEP_PRINTDATE->setSort("");
+                $this->MAPPING_SEP->setSort("");
+                $this->TRANS_ID->setSort("");
+                $this->KDPOLI_EKS->setSort("");
+                $this->COB->setSort("");
+                $this->PENJAMIN->setSort("");
+                $this->ASALRUJUKAN->setSort("");
+                $this->RESPONSEP->setSort("");
+                $this->APPROVAL_DESC->setSort("");
+                $this->APPROVAL_RESPONAJUKAN->setSort("");
+                $this->APPROVAL_RESPONAPPROV->setSort("");
+                $this->RESPONTGLPLG_DESC->setSort("");
+                $this->RESPONPOST_VKLAIM->setSort("");
+                $this->RESPONPUT_VKLAIM->setSort("");
+                $this->RESPONDEL_VKLAIM->setSort("");
+                $this->CALL_TIMES->setSort("");
+                $this->CALL_DATE->setSort("");
+                $this->CALL_DATES->setSort("");
+                $this->SERVED_DATE->setSort("");
+                $this->SERVED_INAP->setSort("");
+                $this->KDDPJP1->setSort("");
+                $this->KDDPJP->setSort("");
+                $this->IDXDAFTAR->setSort("");
+                $this->tgl_kontrol->setSort("");
+            }
+
+            // Reset start position
+            $this->StartRecord = 1;
+            $this->setStartRecordNumber($this->StartRecord);
+        }
+    }
+
+    // Set up list options
+    protected function setupListOptions()
+    {
+        global $Security, $Language;
+
+        // Add group option item
+        $item = &$this->ListOptions->add($this->ListOptions->GroupOptionName);
+        $item->Body = "";
+        $item->OnLeft = true;
+        $item->Visible = false;
+
+        // List actions
+        $item = &$this->ListOptions->add("listactions");
+        $item->CssClass = "text-nowrap";
+        $item->OnLeft = true;
+        $item->Visible = false;
+        $item->ShowInButtonGroup = false;
+        $item->ShowInDropDown = false;
+
+        // "checkbox"
+        $item = &$this->ListOptions->add("checkbox");
+        $item->Visible = false;
+        $item->OnLeft = true;
+        $item->Header = "<div class=\"custom-control custom-checkbox d-inline-block\"><input type=\"checkbox\" name=\"key\" id=\"key\" class=\"custom-control-input\" onclick=\"ew.selectAllKey(this);\"><label class=\"custom-control-label\" for=\"key\"></label></div>";
+        $item->moveTo(0);
+        $item->ShowInDropDown = false;
+        $item->ShowInButtonGroup = false;
+
+        // Drop down button for ListOptions
+        $this->ListOptions->UseDropDownButton = false;
+        $this->ListOptions->DropDownButtonPhrase = $Language->phrase("ButtonListOptions");
+        $this->ListOptions->UseButtonGroup = true;
+        if ($this->ListOptions->UseButtonGroup && IsMobile()) {
+            $this->ListOptions->UseDropDownButton = true;
+        }
+
+        //$this->ListOptions->ButtonClass = ""; // Class for button group
+
+        // Call ListOptions_Load event
+        $this->listOptionsLoad();
+        $this->setupListOptionsExt();
+        $item = $this->ListOptions[$this->ListOptions->GroupOptionName];
+        $item->Visible = $this->ListOptions->groupOptionVisible();
+    }
+
+    // Render list options
+    public function renderListOptions()
+    {
+        global $Security, $Language, $CurrentForm;
+        $this->ListOptions->loadDefault();
+
+        // Call ListOptions_Rendering event
+        $this->listOptionsRendering();
+        $pageUrl = $this->pageUrl();
+        if ($this->CurrentMode == "view") { // View mode
+        } // End View mode
+
+        // Set up list action buttons
+        $opt = $this->ListOptions["listactions"];
+        if ($opt && !$this->isExport() && !$this->CurrentAction) {
+            $body = "";
+            $links = [];
+            foreach ($this->ListActions->Items as $listaction) {
+                if ($listaction->Select == ACTION_SINGLE && $listaction->Allow) {
+                    $action = $listaction->Action;
+                    $caption = $listaction->Caption;
+                    $icon = ($listaction->Icon != "") ? "<i class=\"" . HtmlEncode(str_replace(" ew-icon", "", $listaction->Icon)) . "\" data-caption=\"" . HtmlTitle($caption) . "\"></i> " : "";
+                    $links[] = "<li><a class=\"dropdown-item ew-action ew-list-action\" data-action=\"" . HtmlEncode($action) . "\" data-caption=\"" . HtmlTitle($caption) . "\" href=\"#\" onclick=\"return ew.submitAction(event,jQuery.extend({key:" . $this->keyToJson(true) . "}," . $listaction->toJson(true) . "));\">" . $icon . $listaction->Caption . "</a></li>";
+                    if (count($links) == 1) { // Single button
+                        $body = "<a class=\"ew-action ew-list-action\" data-action=\"" . HtmlEncode($action) . "\" title=\"" . HtmlTitle($caption) . "\" data-caption=\"" . HtmlTitle($caption) . "\" href=\"#\" onclick=\"return ew.submitAction(event,jQuery.extend({key:" . $this->keyToJson(true) . "}," . $listaction->toJson(true) . "));\">" . $icon . $listaction->Caption . "</a>";
+                    }
+                }
+            }
+            if (count($links) > 1) { // More than one buttons, use dropdown
+                $body = "<button class=\"dropdown-toggle btn btn-default ew-actions\" title=\"" . HtmlTitle($Language->phrase("ListActionButton")) . "\" data-toggle=\"dropdown\">" . $Language->phrase("ListActionButton") . "</button>";
+                $content = "";
+                foreach ($links as $link) {
+                    $content .= "<li>" . $link . "</li>";
+                }
+                $body .= "<ul class=\"dropdown-menu" . ($opt->OnLeft ? "" : " dropdown-menu-right") . "\">" . $content . "</ul>";
+                $body = "<div class=\"btn-group btn-group-sm\">" . $body . "</div>";
+            }
+            if (count($links) > 0) {
+                $opt->Body = $body;
+                $opt->Visible = true;
+            }
+        }
+
+        // "checkbox"
+        $opt = $this->ListOptions["checkbox"];
+        $opt->Body = "<div class=\"custom-control custom-checkbox d-inline-block\"><input type=\"checkbox\" id=\"key_m_" . $this->RowCount . "\" name=\"key_m[]\" class=\"custom-control-input ew-multi-select\" value=\"" . HtmlEncode($this->IDXDAFTAR->CurrentValue) . "\" onclick=\"ew.clickMultiCheckbox(event);\"><label class=\"custom-control-label\" for=\"key_m_" . $this->RowCount . "\"></label></div>";
+        $this->renderListOptionsExt();
+
+        // Call ListOptions_Rendered event
+        $this->listOptionsRendered();
+    }
+
+    // Set up other options
+    protected function setupOtherOptions()
+    {
+        global $Language, $Security;
+        $options = &$this->OtherOptions;
+        $option = $options["action"];
+
+        // Set up options default
+        foreach ($options as $option) {
+            $option->UseDropDownButton = false;
+            $option->UseButtonGroup = true;
+            //$option->ButtonClass = ""; // Class for button group
+            $item = &$option->add($option->GroupOptionName);
+            $item->Body = "";
+            $item->Visible = false;
+        }
+        $options["addedit"]->DropDownButtonPhrase = $Language->phrase("ButtonAddEdit");
+        $options["detail"]->DropDownButtonPhrase = $Language->phrase("ButtonDetails");
+        $options["action"]->DropDownButtonPhrase = $Language->phrase("ButtonActions");
+
+        // Filter button
+        $item = &$this->FilterOptions->add("savecurrentfilter");
+        $item->Body = "<a class=\"ew-save-filter\" data-form=\"fV_LABORATORIUMlistsrch\" href=\"#\" onclick=\"return false;\">" . $Language->phrase("SaveCurrentFilter") . "</a>";
+        $item->Visible = true;
+        $item = &$this->FilterOptions->add("deletefilter");
+        $item->Body = "<a class=\"ew-delete-filter\" data-form=\"fV_LABORATORIUMlistsrch\" href=\"#\" onclick=\"return false;\">" . $Language->phrase("DeleteFilter") . "</a>";
+        $item->Visible = true;
+        $this->FilterOptions->UseDropDownButton = true;
+        $this->FilterOptions->UseButtonGroup = !$this->FilterOptions->UseDropDownButton;
+        $this->FilterOptions->DropDownButtonPhrase = $Language->phrase("Filters");
+
+        // Add group option item
+        $item = &$this->FilterOptions->add($this->FilterOptions->GroupOptionName);
+        $item->Body = "";
+        $item->Visible = false;
+    }
+
+    // Render other options
+    public function renderOtherOptions()
+    {
+        global $Language, $Security;
+        $options = &$this->OtherOptions;
+        $option = $options["action"];
+        // Set up list action buttons
+        foreach ($this->ListActions->Items as $listaction) {
+            if ($listaction->Select == ACTION_MULTIPLE) {
+                $item = &$option->add("custom_" . $listaction->Action);
+                $caption = $listaction->Caption;
+                $icon = ($listaction->Icon != "") ? '<i class="' . HtmlEncode($listaction->Icon) . '" data-caption="' . HtmlEncode($caption) . '"></i>' . $caption : $caption;
+                $item->Body = '<a class="ew-action ew-list-action" title="' . HtmlEncode($caption) . '" data-caption="' . HtmlEncode($caption) . '" href="#" onclick="return ew.submitAction(event,jQuery.extend({f:document.fV_LABORATORIUMlist},' . $listaction->toJson(true) . '));">' . $icon . '</a>';
+                $item->Visible = $listaction->Allow;
+            }
+        }
+
+        // Hide grid edit and other options
+        if ($this->TotalRecords <= 0) {
+            $option = $options["addedit"];
+            $item = $option["gridedit"];
+            if ($item) {
+                $item->Visible = false;
+            }
+            $option = $options["action"];
+            $option->hideAllOptions();
+        }
+    }
+
+    // Process list action
+    protected function processListAction()
+    {
+        global $Language, $Security;
+        $userlist = "";
+        $user = "";
+        $filter = $this->getFilterFromRecordKeys();
+        $userAction = Post("useraction", "");
+        if ($filter != "" && $userAction != "") {
+            // Check permission first
+            $actionCaption = $userAction;
+            if (array_key_exists($userAction, $this->ListActions->Items)) {
+                $actionCaption = $this->ListActions[$userAction]->Caption;
+                if (!$this->ListActions[$userAction]->Allow) {
+                    $errmsg = str_replace('%s', $actionCaption, $Language->phrase("CustomActionNotAllowed"));
+                    if (Post("ajax") == $userAction) { // Ajax
+                        echo "<p class=\"text-danger\">" . $errmsg . "</p>";
+                        return true;
+                    } else {
+                        $this->setFailureMessage($errmsg);
+                        return false;
+                    }
+                }
+            }
+            $this->CurrentFilter = $filter;
+            $sql = $this->getCurrentSql();
+            $conn = $this->getConnection();
+            $rs = LoadRecordset($sql, $conn, \PDO::FETCH_ASSOC);
+            $this->CurrentAction = $userAction;
+
+            // Call row action event
+            if ($rs) {
+                $conn->beginTransaction();
+                $this->SelectedCount = $rs->recordCount();
+                $this->SelectedIndex = 0;
+                while (!$rs->EOF) {
+                    $this->SelectedIndex++;
+                    $row = $rs->fields;
+                    $processed = $this->rowCustomAction($userAction, $row);
+                    if (!$processed) {
+                        break;
+                    }
+                    $rs->moveNext();
+                }
+                if ($processed) {
+                    $conn->commit(); // Commit the changes
+                    if ($this->getSuccessMessage() == "" && !ob_get_length()) { // No output
+                        $this->setSuccessMessage(str_replace('%s', $actionCaption, $Language->phrase("CustomActionCompleted"))); // Set up success message
+                    }
+                } else {
+                    $conn->rollback(); // Rollback changes
+
+                    // Set up error message
+                    if ($this->getSuccessMessage() != "" || $this->getFailureMessage() != "") {
+                        // Use the message, do nothing
+                    } elseif ($this->CancelMessage != "") {
+                        $this->setFailureMessage($this->CancelMessage);
+                        $this->CancelMessage = "";
+                    } else {
+                        $this->setFailureMessage(str_replace('%s', $actionCaption, $Language->phrase("CustomActionFailed")));
+                    }
+                }
+            }
+            if ($rs) {
+                $rs->close();
+            }
+            $this->CurrentAction = ""; // Clear action
+            if (Post("ajax") == $userAction) { // Ajax
+                if ($this->getSuccessMessage() != "") {
+                    echo "<p class=\"text-success\">" . $this->getSuccessMessage() . "</p>";
+                    $this->clearSuccessMessage(); // Clear message
+                }
+                if ($this->getFailureMessage() != "") {
+                    echo "<p class=\"text-danger\">" . $this->getFailureMessage() . "</p>";
+                    $this->clearFailureMessage(); // Clear message
+                }
+                return true;
+            }
+        }
+        return false; // Not ajax request
+    }
+
+    // Set up list options (extended codes)
+    protected function setupListOptionsExt()
+    {
+    }
+
+    // Render list options (extended codes)
+    protected function renderListOptionsExt()
+    {
+    }
+
+    // Load basic search values
+    protected function loadBasicSearchValues()
+    {
+        $this->BasicSearch->setKeyword(Get(Config("TABLE_BASIC_SEARCH"), ""), false);
+        if ($this->BasicSearch->Keyword != "" && $this->Command == "") {
+            $this->Command = "search";
+        }
+        $this->BasicSearch->setType(Get(Config("TABLE_BASIC_SEARCH_TYPE"), ""), false);
+    }
+
+    // Load recordset
+    public function loadRecordset($offset = -1, $rowcnt = -1)
+    {
+        // Load List page SQL (QueryBuilder)
+        $sql = $this->getListSql();
+
+        // Load recordset
+        if ($offset > -1) {
+            $sql->setFirstResult($offset);
+        }
+        if ($rowcnt > 0) {
+            $sql->setMaxResults($rowcnt);
+        }
+        $stmt = $sql->execute();
+        $rs = new Recordset($stmt, $sql);
+
+        // Call Recordset Selected event
+        $this->recordsetSelected($rs);
+        return $rs;
+    }
+
+    /**
+     * Load row based on key values
+     *
+     * @return void
+     */
+    public function loadRow()
+    {
+        global $Security, $Language;
+        $filter = $this->getRecordFilter();
+
+        // Call Row Selecting event
+        $this->rowSelecting($filter);
+
+        // Load SQL based on filter
+        $this->CurrentFilter = $filter;
+        $sql = $this->getCurrentSql();
+        $conn = $this->getConnection();
+        $res = false;
+        $row = $conn->fetchAssoc($sql);
+        if ($row) {
+            $res = true;
+            $this->loadRowValues($row); // Load row values
+        }
+        return $res;
+    }
+
+    /**
+     * Load row values from recordset or record
+     *
+     * @param Recordset|array $rs Record
+     * @return void
+     */
+    public function loadRowValues($rs = null)
+    {
+        if (is_array($rs)) {
+            $row = $rs;
+        } elseif ($rs && property_exists($rs, "fields")) { // Recordset
+            $row = $rs->fields;
+        } else {
+            $row = $this->newRow();
+        }
+
+        // Call Row Selected event
+        $this->rowSelected($row);
+        if (!$rs) {
+            return;
+        }
+        $this->ORG_UNIT_CODE->setDbValue($row['ORG_UNIT_CODE']);
+        $this->NO_REGISTRATION->setDbValue($row['NO_REGISTRATION']);
+        $this->VISIT_ID->setDbValue($row['VISIT_ID']);
+        $this->STATUS_PASIEN_ID->setDbValue($row['STATUS_PASIEN_ID']);
+        $this->RUJUKAN_ID->setDbValue($row['RUJUKAN_ID']);
+        $this->ADDRESS_OF_RUJUKAN->setDbValue($row['ADDRESS_OF_RUJUKAN']);
+        $this->REASON_ID->setDbValue($row['REASON_ID']);
+        $this->WAY_ID->setDbValue($row['WAY_ID']);
+        $this->PATIENT_CATEGORY_ID->setDbValue($row['PATIENT_CATEGORY_ID']);
+        $this->BOOKED_DATE->setDbValue($row['BOOKED_DATE']);
+        $this->VISIT_DATE->setDbValue($row['VISIT_DATE']);
+        $this->ISNEW->setDbValue($row['ISNEW']);
+        $this->FOLLOW_UP->setDbValue($row['FOLLOW_UP']);
+        $this->PLACE_TYPE->setDbValue($row['PLACE_TYPE']);
+        $this->CLINIC_ID->setDbValue($row['CLINIC_ID']);
+        $this->CLINIC_ID_FROM->setDbValue($row['CLINIC_ID_FROM']);
+        $this->CLASS_ROOM_ID->setDbValue($row['CLASS_ROOM_ID']);
+        $this->BED_ID->setDbValue($row['BED_ID']);
+        $this->KELUAR_ID->setDbValue($row['KELUAR_ID']);
+        $this->IN_DATE->setDbValue($row['IN_DATE']);
+        $this->EXIT_DATE->setDbValue($row['EXIT_DATE']);
+        $this->DIANTAR_OLEH->setDbValue($row['DIANTAR_OLEH']);
+        $this->GENDER->setDbValue($row['GENDER']);
+        $this->DESCRIPTION->setDbValue($row['DESCRIPTION']);
+        $this->VISITOR_ADDRESS->setDbValue($row['VISITOR_ADDRESS']);
+        $this->MODIFIED_BY->setDbValue($row['MODIFIED_BY']);
+        $this->MODIFIED_DATE->setDbValue($row['MODIFIED_DATE']);
+        $this->MODIFIED_FROM->setDbValue($row['MODIFIED_FROM']);
+        $this->EMPLOYEE_ID->setDbValue($row['EMPLOYEE_ID']);
+        $this->EMPLOYEE_ID_FROM->setDbValue($row['EMPLOYEE_ID_FROM']);
+        $this->RESPONSIBLE_ID->setDbValue($row['RESPONSIBLE_ID']);
+        $this->RESPONSIBLE->setDbValue($row['RESPONSIBLE']);
+        $this->FAMILY_STATUS_ID->setDbValue($row['FAMILY_STATUS_ID']);
+        $this->TICKET_NO->setDbValue($row['TICKET_NO']);
+        $this->ISATTENDED->setDbValue($row['ISATTENDED']);
+        $this->PAYOR_ID->setDbValue($row['PAYOR_ID']);
+        $this->CLASS_ID->setDbValue($row['CLASS_ID']);
+        $this->ISPERTARIF->setDbValue($row['ISPERTARIF']);
+        $this->KAL_ID->setDbValue($row['KAL_ID']);
+        $this->EMPLOYEE_INAP->setDbValue($row['EMPLOYEE_INAP']);
+        $this->PASIEN_ID->setDbValue($row['PASIEN_ID']);
+        $this->KARYAWAN->setDbValue($row['KARYAWAN']);
+        $this->ACCOUNT_ID->setDbValue($row['ACCOUNT_ID']);
+        $this->CLASS_ID_PLAFOND->setDbValue($row['CLASS_ID_PLAFOND']);
+        $this->BACKCHARGE->setDbValue($row['BACKCHARGE']);
+        $this->COVERAGE_ID->setDbValue($row['COVERAGE_ID']);
+        $this->AGEYEAR->setDbValue($row['AGEYEAR']);
+        $this->AGEMONTH->setDbValue($row['AGEMONTH']);
+        $this->AGEDAY->setDbValue($row['AGEDAY']);
+        $this->RECOMENDATION->setDbValue($row['RECOMENDATION']);
+        $this->CONCLUSION->setDbValue($row['CONCLUSION']);
+        $this->SPECIMENNO->setDbValue($row['SPECIMENNO']);
+        $this->LOCKED->setDbValue($row['LOCKED']);
+        $this->RM_OUT_DATE->setDbValue($row['RM_OUT_DATE']);
+        $this->RM_IN_DATE->setDbValue($row['RM_IN_DATE']);
+        $this->LAMA_PINJAM->setDbValue($row['LAMA_PINJAM']);
+        $this->STANDAR_RJ->setDbValue($row['STANDAR_RJ']);
+        $this->LENGKAP_RJ->setDbValue($row['LENGKAP_RJ']);
+        $this->LENGKAP_RI->setDbValue($row['LENGKAP_RI']);
+        $this->RESEND_RM_DATE->setDbValue($row['RESEND_RM_DATE']);
+        $this->LENGKAP_RM1->setDbValue($row['LENGKAP_RM1']);
+        $this->LENGKAP_RESUME->setDbValue($row['LENGKAP_RESUME']);
+        $this->LENGKAP_ANAMNESIS->setDbValue($row['LENGKAP_ANAMNESIS']);
+        $this->LENGKAP_CONSENT->setDbValue($row['LENGKAP_CONSENT']);
+        $this->LENGKAP_ANESTESI->setDbValue($row['LENGKAP_ANESTESI']);
+        $this->LENGKAP_OP->setDbValue($row['LENGKAP_OP']);
+        $this->BACK_RM_DATE->setDbValue($row['BACK_RM_DATE']);
+        $this->VALID_RM_DATE->setDbValue($row['VALID_RM_DATE']);
+        $this->NO_SKP->setDbValue($row['NO_SKP']);
+        $this->NO_SKPINAP->setDbValue($row['NO_SKPINAP']);
+        $this->DIAGNOSA_ID->setDbValue($row['DIAGNOSA_ID']);
+        $this->ticket_all->setDbValue($row['ticket_all']);
+        $this->tanggal_rujukan->setDbValue($row['tanggal_rujukan']);
+        $this->ISRJ->setDbValue($row['ISRJ']);
+        $this->NORUJUKAN->setDbValue($row['NORUJUKAN']);
+        $this->PPKRUJUKAN->setDbValue($row['PPKRUJUKAN']);
+        $this->LOKASILAKA->setDbValue($row['LOKASILAKA']);
+        $this->KDPOLI->setDbValue($row['KDPOLI']);
+        $this->EDIT_SEP->setDbValue($row['EDIT_SEP']);
+        $this->DELETE_SEP->setDbValue($row['DELETE_SEP']);
+        $this->KODE_AGAMA->setDbValue($row['KODE_AGAMA']);
+        $this->DIAG_AWAL->setDbValue($row['DIAG_AWAL']);
+        $this->AKTIF->setDbValue($row['AKTIF']);
+        $this->BILL_INAP->setDbValue($row['BILL_INAP']);
+        $this->SEP_PRINTDATE->setDbValue($row['SEP_PRINTDATE']);
+        $this->MAPPING_SEP->setDbValue($row['MAPPING_SEP']);
+        $this->TRANS_ID->setDbValue($row['TRANS_ID']);
+        $this->KDPOLI_EKS->setDbValue($row['KDPOLI_EKS']);
+        $this->COB->setDbValue($row['COB']);
+        $this->PENJAMIN->setDbValue($row['PENJAMIN']);
+        $this->ASALRUJUKAN->setDbValue($row['ASALRUJUKAN']);
+        $this->RESPONSEP->setDbValue($row['RESPONSEP']);
+        $this->APPROVAL_DESC->setDbValue($row['APPROVAL_DESC']);
+        $this->APPROVAL_RESPONAJUKAN->setDbValue($row['APPROVAL_RESPONAJUKAN']);
+        $this->APPROVAL_RESPONAPPROV->setDbValue($row['APPROVAL_RESPONAPPROV']);
+        $this->RESPONTGLPLG_DESC->setDbValue($row['RESPONTGLPLG_DESC']);
+        $this->RESPONPOST_VKLAIM->setDbValue($row['RESPONPOST_VKLAIM']);
+        $this->RESPONPUT_VKLAIM->setDbValue($row['RESPONPUT_VKLAIM']);
+        $this->RESPONDEL_VKLAIM->setDbValue($row['RESPONDEL_VKLAIM']);
+        $this->CALL_TIMES->setDbValue($row['CALL_TIMES']);
+        $this->CALL_DATE->setDbValue($row['CALL_DATE']);
+        $this->CALL_DATES->setDbValue($row['CALL_DATES']);
+        $this->SERVED_DATE->setDbValue($row['SERVED_DATE']);
+        $this->SERVED_INAP->setDbValue($row['SERVED_INAP']);
+        $this->KDDPJP1->setDbValue($row['KDDPJP1']);
+        $this->KDDPJP->setDbValue($row['KDDPJP']);
+        $this->IDXDAFTAR->setDbValue($row['IDXDAFTAR']);
+        $this->tgl_kontrol->setDbValue($row['tgl_kontrol']);
+    }
+
+    // Return a row with default values
+    protected function newRow()
+    {
+        $row = [];
+        $row['ORG_UNIT_CODE'] = null;
+        $row['NO_REGISTRATION'] = null;
+        $row['VISIT_ID'] = null;
+        $row['STATUS_PASIEN_ID'] = null;
+        $row['RUJUKAN_ID'] = null;
+        $row['ADDRESS_OF_RUJUKAN'] = null;
+        $row['REASON_ID'] = null;
+        $row['WAY_ID'] = null;
+        $row['PATIENT_CATEGORY_ID'] = null;
+        $row['BOOKED_DATE'] = null;
+        $row['VISIT_DATE'] = null;
+        $row['ISNEW'] = null;
+        $row['FOLLOW_UP'] = null;
+        $row['PLACE_TYPE'] = null;
+        $row['CLINIC_ID'] = null;
+        $row['CLINIC_ID_FROM'] = null;
+        $row['CLASS_ROOM_ID'] = null;
+        $row['BED_ID'] = null;
+        $row['KELUAR_ID'] = null;
+        $row['IN_DATE'] = null;
+        $row['EXIT_DATE'] = null;
+        $row['DIANTAR_OLEH'] = null;
+        $row['GENDER'] = null;
+        $row['DESCRIPTION'] = null;
+        $row['VISITOR_ADDRESS'] = null;
+        $row['MODIFIED_BY'] = null;
+        $row['MODIFIED_DATE'] = null;
+        $row['MODIFIED_FROM'] = null;
+        $row['EMPLOYEE_ID'] = null;
+        $row['EMPLOYEE_ID_FROM'] = null;
+        $row['RESPONSIBLE_ID'] = null;
+        $row['RESPONSIBLE'] = null;
+        $row['FAMILY_STATUS_ID'] = null;
+        $row['TICKET_NO'] = null;
+        $row['ISATTENDED'] = null;
+        $row['PAYOR_ID'] = null;
+        $row['CLASS_ID'] = null;
+        $row['ISPERTARIF'] = null;
+        $row['KAL_ID'] = null;
+        $row['EMPLOYEE_INAP'] = null;
+        $row['PASIEN_ID'] = null;
+        $row['KARYAWAN'] = null;
+        $row['ACCOUNT_ID'] = null;
+        $row['CLASS_ID_PLAFOND'] = null;
+        $row['BACKCHARGE'] = null;
+        $row['COVERAGE_ID'] = null;
+        $row['AGEYEAR'] = null;
+        $row['AGEMONTH'] = null;
+        $row['AGEDAY'] = null;
+        $row['RECOMENDATION'] = null;
+        $row['CONCLUSION'] = null;
+        $row['SPECIMENNO'] = null;
+        $row['LOCKED'] = null;
+        $row['RM_OUT_DATE'] = null;
+        $row['RM_IN_DATE'] = null;
+        $row['LAMA_PINJAM'] = null;
+        $row['STANDAR_RJ'] = null;
+        $row['LENGKAP_RJ'] = null;
+        $row['LENGKAP_RI'] = null;
+        $row['RESEND_RM_DATE'] = null;
+        $row['LENGKAP_RM1'] = null;
+        $row['LENGKAP_RESUME'] = null;
+        $row['LENGKAP_ANAMNESIS'] = null;
+        $row['LENGKAP_CONSENT'] = null;
+        $row['LENGKAP_ANESTESI'] = null;
+        $row['LENGKAP_OP'] = null;
+        $row['BACK_RM_DATE'] = null;
+        $row['VALID_RM_DATE'] = null;
+        $row['NO_SKP'] = null;
+        $row['NO_SKPINAP'] = null;
+        $row['DIAGNOSA_ID'] = null;
+        $row['ticket_all'] = null;
+        $row['tanggal_rujukan'] = null;
+        $row['ISRJ'] = null;
+        $row['NORUJUKAN'] = null;
+        $row['PPKRUJUKAN'] = null;
+        $row['LOKASILAKA'] = null;
+        $row['KDPOLI'] = null;
+        $row['EDIT_SEP'] = null;
+        $row['DELETE_SEP'] = null;
+        $row['KODE_AGAMA'] = null;
+        $row['DIAG_AWAL'] = null;
+        $row['AKTIF'] = null;
+        $row['BILL_INAP'] = null;
+        $row['SEP_PRINTDATE'] = null;
+        $row['MAPPING_SEP'] = null;
+        $row['TRANS_ID'] = null;
+        $row['KDPOLI_EKS'] = null;
+        $row['COB'] = null;
+        $row['PENJAMIN'] = null;
+        $row['ASALRUJUKAN'] = null;
+        $row['RESPONSEP'] = null;
+        $row['APPROVAL_DESC'] = null;
+        $row['APPROVAL_RESPONAJUKAN'] = null;
+        $row['APPROVAL_RESPONAPPROV'] = null;
+        $row['RESPONTGLPLG_DESC'] = null;
+        $row['RESPONPOST_VKLAIM'] = null;
+        $row['RESPONPUT_VKLAIM'] = null;
+        $row['RESPONDEL_VKLAIM'] = null;
+        $row['CALL_TIMES'] = null;
+        $row['CALL_DATE'] = null;
+        $row['CALL_DATES'] = null;
+        $row['SERVED_DATE'] = null;
+        $row['SERVED_INAP'] = null;
+        $row['KDDPJP1'] = null;
+        $row['KDDPJP'] = null;
+        $row['IDXDAFTAR'] = null;
+        $row['tgl_kontrol'] = null;
+        return $row;
+    }
+
+    // Load old record
+    protected function loadOldRecord()
+    {
+        // Load old record
+        $this->OldRecordset = null;
+        $validKey = $this->OldKey != "";
+        if ($validKey) {
+            $this->CurrentFilter = $this->getRecordFilter();
+            $sql = $this->getCurrentSql();
+            $conn = $this->getConnection();
+            $this->OldRecordset = LoadRecordset($sql, $conn);
+        }
+        $this->loadRowValues($this->OldRecordset); // Load row values
+        return $validKey;
+    }
+
+    // Render row values based on field settings
+    public function renderRow()
+    {
+        global $Security, $Language, $CurrentLanguage;
+
+        // Initialize URLs
+        $this->ViewUrl = $this->getViewUrl();
+        $this->EditUrl = $this->getEditUrl();
+        $this->InlineEditUrl = $this->getInlineEditUrl();
+        $this->CopyUrl = $this->getCopyUrl();
+        $this->InlineCopyUrl = $this->getInlineCopyUrl();
+        $this->DeleteUrl = $this->getDeleteUrl();
+
+        // Call Row_Rendering event
+        $this->rowRendering();
+
+        // Common render codes for all row types
+
+        // ORG_UNIT_CODE
+
+        // NO_REGISTRATION
+
+        // VISIT_ID
+
+        // STATUS_PASIEN_ID
+
+        // RUJUKAN_ID
+
+        // ADDRESS_OF_RUJUKAN
+
+        // REASON_ID
+
+        // WAY_ID
+
+        // PATIENT_CATEGORY_ID
+
+        // BOOKED_DATE
+
+        // VISIT_DATE
+
+        // ISNEW
+
+        // FOLLOW_UP
+
+        // PLACE_TYPE
+
+        // CLINIC_ID
+
+        // CLINIC_ID_FROM
+
+        // CLASS_ROOM_ID
+
+        // BED_ID
+
+        // KELUAR_ID
+
+        // IN_DATE
+
+        // EXIT_DATE
+
+        // DIANTAR_OLEH
+
+        // GENDER
+
+        // DESCRIPTION
+
+        // VISITOR_ADDRESS
+
+        // MODIFIED_BY
+
+        // MODIFIED_DATE
+
+        // MODIFIED_FROM
+
+        // EMPLOYEE_ID
+
+        // EMPLOYEE_ID_FROM
+
+        // RESPONSIBLE_ID
+
+        // RESPONSIBLE
+
+        // FAMILY_STATUS_ID
+
+        // TICKET_NO
+
+        // ISATTENDED
+
+        // PAYOR_ID
+
+        // CLASS_ID
+
+        // ISPERTARIF
+
+        // KAL_ID
+
+        // EMPLOYEE_INAP
+
+        // PASIEN_ID
+
+        // KARYAWAN
+
+        // ACCOUNT_ID
+
+        // CLASS_ID_PLAFOND
+
+        // BACKCHARGE
+
+        // COVERAGE_ID
+
+        // AGEYEAR
+
+        // AGEMONTH
+
+        // AGEDAY
+
+        // RECOMENDATION
+
+        // CONCLUSION
+
+        // SPECIMENNO
+
+        // LOCKED
+
+        // RM_OUT_DATE
+
+        // RM_IN_DATE
+
+        // LAMA_PINJAM
+
+        // STANDAR_RJ
+
+        // LENGKAP_RJ
+
+        // LENGKAP_RI
+
+        // RESEND_RM_DATE
+
+        // LENGKAP_RM1
+
+        // LENGKAP_RESUME
+
+        // LENGKAP_ANAMNESIS
+
+        // LENGKAP_CONSENT
+
+        // LENGKAP_ANESTESI
+
+        // LENGKAP_OP
+
+        // BACK_RM_DATE
+
+        // VALID_RM_DATE
+
+        // NO_SKP
+
+        // NO_SKPINAP
+
+        // DIAGNOSA_ID
+
+        // ticket_all
+
+        // tanggal_rujukan
+
+        // ISRJ
+
+        // NORUJUKAN
+
+        // PPKRUJUKAN
+
+        // LOKASILAKA
+
+        // KDPOLI
+
+        // EDIT_SEP
+
+        // DELETE_SEP
+
+        // KODE_AGAMA
+
+        // DIAG_AWAL
+
+        // AKTIF
+
+        // BILL_INAP
+
+        // SEP_PRINTDATE
+
+        // MAPPING_SEP
+
+        // TRANS_ID
+
+        // KDPOLI_EKS
+
+        // COB
+
+        // PENJAMIN
+
+        // ASALRUJUKAN
+
+        // RESPONSEP
+
+        // APPROVAL_DESC
+
+        // APPROVAL_RESPONAJUKAN
+
+        // APPROVAL_RESPONAPPROV
+
+        // RESPONTGLPLG_DESC
+
+        // RESPONPOST_VKLAIM
+
+        // RESPONPUT_VKLAIM
+
+        // RESPONDEL_VKLAIM
+
+        // CALL_TIMES
+
+        // CALL_DATE
+
+        // CALL_DATES
+
+        // SERVED_DATE
+
+        // SERVED_INAP
+
+        // KDDPJP1
+
+        // KDDPJP
+
+        // IDXDAFTAR
+
+        // tgl_kontrol
+        if ($this->RowType == ROWTYPE_VIEW) {
+            // ORG_UNIT_CODE
+            $this->ORG_UNIT_CODE->ViewValue = $this->ORG_UNIT_CODE->CurrentValue;
+            $this->ORG_UNIT_CODE->ViewCustomAttributes = "";
+
+            // NO_REGISTRATION
+            $this->NO_REGISTRATION->ViewValue = $this->NO_REGISTRATION->CurrentValue;
+            $this->NO_REGISTRATION->ViewCustomAttributes = "";
+
+            // VISIT_ID
+            $this->VISIT_ID->ViewValue = $this->VISIT_ID->CurrentValue;
+            $this->VISIT_ID->ViewCustomAttributes = "";
+
+            // STATUS_PASIEN_ID
+            $this->STATUS_PASIEN_ID->ViewValue = $this->STATUS_PASIEN_ID->CurrentValue;
+            $this->STATUS_PASIEN_ID->ViewValue = FormatNumber($this->STATUS_PASIEN_ID->ViewValue, 0, -2, -2, -2);
+            $this->STATUS_PASIEN_ID->ViewCustomAttributes = "";
+
+            // RUJUKAN_ID
+            $this->RUJUKAN_ID->ViewValue = $this->RUJUKAN_ID->CurrentValue;
+            $this->RUJUKAN_ID->ViewValue = FormatNumber($this->RUJUKAN_ID->ViewValue, 0, -2, -2, -2);
+            $this->RUJUKAN_ID->ViewCustomAttributes = "";
+
+            // ADDRESS_OF_RUJUKAN
+            $this->ADDRESS_OF_RUJUKAN->ViewValue = $this->ADDRESS_OF_RUJUKAN->CurrentValue;
+            $this->ADDRESS_OF_RUJUKAN->ViewCustomAttributes = "";
+
+            // REASON_ID
+            $this->REASON_ID->ViewValue = $this->REASON_ID->CurrentValue;
+            $this->REASON_ID->ViewValue = FormatNumber($this->REASON_ID->ViewValue, 0, -2, -2, -2);
+            $this->REASON_ID->ViewCustomAttributes = "";
+
+            // WAY_ID
+            $this->WAY_ID->ViewValue = $this->WAY_ID->CurrentValue;
+            $this->WAY_ID->ViewValue = FormatNumber($this->WAY_ID->ViewValue, 0, -2, -2, -2);
+            $this->WAY_ID->ViewCustomAttributes = "";
+
+            // PATIENT_CATEGORY_ID
+            $this->PATIENT_CATEGORY_ID->ViewValue = $this->PATIENT_CATEGORY_ID->CurrentValue;
+            $this->PATIENT_CATEGORY_ID->ViewValue = FormatNumber($this->PATIENT_CATEGORY_ID->ViewValue, 0, -2, -2, -2);
+            $this->PATIENT_CATEGORY_ID->ViewCustomAttributes = "";
+
+            // BOOKED_DATE
+            $this->BOOKED_DATE->ViewValue = $this->BOOKED_DATE->CurrentValue;
+            $this->BOOKED_DATE->ViewValue = FormatDateTime($this->BOOKED_DATE->ViewValue, 0);
+            $this->BOOKED_DATE->ViewCustomAttributes = "";
+
+            // VISIT_DATE
+            $this->VISIT_DATE->ViewValue = $this->VISIT_DATE->CurrentValue;
+            $this->VISIT_DATE->ViewValue = FormatDateTime($this->VISIT_DATE->ViewValue, 0);
+            $this->VISIT_DATE->ViewCustomAttributes = "";
+
+            // ISNEW
+            $this->ISNEW->ViewValue = $this->ISNEW->CurrentValue;
+            $this->ISNEW->ViewCustomAttributes = "";
+
+            // FOLLOW_UP
+            $this->FOLLOW_UP->ViewValue = $this->FOLLOW_UP->CurrentValue;
+            $this->FOLLOW_UP->ViewValue = FormatNumber($this->FOLLOW_UP->ViewValue, 0, -2, -2, -2);
+            $this->FOLLOW_UP->ViewCustomAttributes = "";
+
+            // PLACE_TYPE
+            $this->PLACE_TYPE->ViewValue = $this->PLACE_TYPE->CurrentValue;
+            $this->PLACE_TYPE->ViewValue = FormatNumber($this->PLACE_TYPE->ViewValue, 0, -2, -2, -2);
+            $this->PLACE_TYPE->ViewCustomAttributes = "";
+
+            // CLINIC_ID
+            $this->CLINIC_ID->ViewValue = $this->CLINIC_ID->CurrentValue;
+            $this->CLINIC_ID->ViewCustomAttributes = "";
+
+            // CLINIC_ID_FROM
+            $this->CLINIC_ID_FROM->ViewValue = $this->CLINIC_ID_FROM->CurrentValue;
+            $this->CLINIC_ID_FROM->ViewCustomAttributes = "";
+
+            // CLASS_ROOM_ID
+            $this->CLASS_ROOM_ID->ViewValue = $this->CLASS_ROOM_ID->CurrentValue;
+            $this->CLASS_ROOM_ID->ViewCustomAttributes = "";
+
+            // BED_ID
+            $this->BED_ID->ViewValue = $this->BED_ID->CurrentValue;
+            $this->BED_ID->ViewValue = FormatNumber($this->BED_ID->ViewValue, 0, -2, -2, -2);
+            $this->BED_ID->ViewCustomAttributes = "";
+
+            // KELUAR_ID
+            $this->KELUAR_ID->ViewValue = $this->KELUAR_ID->CurrentValue;
+            $this->KELUAR_ID->ViewValue = FormatNumber($this->KELUAR_ID->ViewValue, 0, -2, -2, -2);
+            $this->KELUAR_ID->ViewCustomAttributes = "";
+
+            // IN_DATE
+            $this->IN_DATE->ViewValue = $this->IN_DATE->CurrentValue;
+            $this->IN_DATE->ViewValue = FormatDateTime($this->IN_DATE->ViewValue, 0);
+            $this->IN_DATE->ViewCustomAttributes = "";
+
+            // EXIT_DATE
+            $this->EXIT_DATE->ViewValue = $this->EXIT_DATE->CurrentValue;
+            $this->EXIT_DATE->ViewValue = FormatDateTime($this->EXIT_DATE->ViewValue, 0);
+            $this->EXIT_DATE->ViewCustomAttributes = "";
+
+            // DIANTAR_OLEH
+            $this->DIANTAR_OLEH->ViewValue = $this->DIANTAR_OLEH->CurrentValue;
+            $this->DIANTAR_OLEH->ViewCustomAttributes = "";
+
+            // GENDER
+            $this->GENDER->ViewValue = $this->GENDER->CurrentValue;
+            $this->GENDER->ViewCustomAttributes = "";
+
+            // DESCRIPTION
+            $this->DESCRIPTION->ViewValue = $this->DESCRIPTION->CurrentValue;
+            $this->DESCRIPTION->ViewCustomAttributes = "";
+
+            // VISITOR_ADDRESS
+            $this->VISITOR_ADDRESS->ViewValue = $this->VISITOR_ADDRESS->CurrentValue;
+            $this->VISITOR_ADDRESS->ViewCustomAttributes = "";
+
+            // MODIFIED_BY
+            $this->MODIFIED_BY->ViewValue = $this->MODIFIED_BY->CurrentValue;
+            $this->MODIFIED_BY->ViewCustomAttributes = "";
+
+            // MODIFIED_DATE
+            $this->MODIFIED_DATE->ViewValue = $this->MODIFIED_DATE->CurrentValue;
+            $this->MODIFIED_DATE->ViewValue = FormatDateTime($this->MODIFIED_DATE->ViewValue, 0);
+            $this->MODIFIED_DATE->ViewCustomAttributes = "";
+
+            // MODIFIED_FROM
+            $this->MODIFIED_FROM->ViewValue = $this->MODIFIED_FROM->CurrentValue;
+            $this->MODIFIED_FROM->ViewCustomAttributes = "";
+
+            // EMPLOYEE_ID
+            $this->EMPLOYEE_ID->ViewValue = $this->EMPLOYEE_ID->CurrentValue;
+            $this->EMPLOYEE_ID->ViewCustomAttributes = "";
+
+            // EMPLOYEE_ID_FROM
+            $this->EMPLOYEE_ID_FROM->ViewValue = $this->EMPLOYEE_ID_FROM->CurrentValue;
+            $this->EMPLOYEE_ID_FROM->ViewCustomAttributes = "";
+
+            // RESPONSIBLE_ID
+            $this->RESPONSIBLE_ID->ViewValue = $this->RESPONSIBLE_ID->CurrentValue;
+            $this->RESPONSIBLE_ID->ViewValue = FormatNumber($this->RESPONSIBLE_ID->ViewValue, 0, -2, -2, -2);
+            $this->RESPONSIBLE_ID->ViewCustomAttributes = "";
+
+            // RESPONSIBLE
+            $this->RESPONSIBLE->ViewValue = $this->RESPONSIBLE->CurrentValue;
+            $this->RESPONSIBLE->ViewCustomAttributes = "";
+
+            // FAMILY_STATUS_ID
+            $this->FAMILY_STATUS_ID->ViewValue = $this->FAMILY_STATUS_ID->CurrentValue;
+            $this->FAMILY_STATUS_ID->ViewValue = FormatNumber($this->FAMILY_STATUS_ID->ViewValue, 0, -2, -2, -2);
+            $this->FAMILY_STATUS_ID->ViewCustomAttributes = "";
+
+            // TICKET_NO
+            $this->TICKET_NO->ViewValue = $this->TICKET_NO->CurrentValue;
+            $this->TICKET_NO->ViewValue = FormatNumber($this->TICKET_NO->ViewValue, 0, -2, -2, -2);
+            $this->TICKET_NO->ViewCustomAttributes = "";
+
+            // ISATTENDED
+            $this->ISATTENDED->ViewValue = $this->ISATTENDED->CurrentValue;
+            $this->ISATTENDED->ViewCustomAttributes = "";
+
+            // PAYOR_ID
+            $this->PAYOR_ID->ViewValue = $this->PAYOR_ID->CurrentValue;
+            $this->PAYOR_ID->ViewCustomAttributes = "";
+
+            // CLASS_ID
+            $this->CLASS_ID->ViewValue = $this->CLASS_ID->CurrentValue;
+            $this->CLASS_ID->ViewValue = FormatNumber($this->CLASS_ID->ViewValue, 0, -2, -2, -2);
+            $this->CLASS_ID->ViewCustomAttributes = "";
+
+            // ISPERTARIF
+            $this->ISPERTARIF->ViewValue = $this->ISPERTARIF->CurrentValue;
+            $this->ISPERTARIF->ViewCustomAttributes = "";
+
+            // KAL_ID
+            $this->KAL_ID->ViewValue = $this->KAL_ID->CurrentValue;
+            $this->KAL_ID->ViewCustomAttributes = "";
+
+            // EMPLOYEE_INAP
+            $this->EMPLOYEE_INAP->ViewValue = $this->EMPLOYEE_INAP->CurrentValue;
+            $this->EMPLOYEE_INAP->ViewCustomAttributes = "";
+
+            // PASIEN_ID
+            $this->PASIEN_ID->ViewValue = $this->PASIEN_ID->CurrentValue;
+            $this->PASIEN_ID->ViewCustomAttributes = "";
+
+            // KARYAWAN
+            $this->KARYAWAN->ViewValue = $this->KARYAWAN->CurrentValue;
+            $this->KARYAWAN->ViewCustomAttributes = "";
+
+            // ACCOUNT_ID
+            $this->ACCOUNT_ID->ViewValue = $this->ACCOUNT_ID->CurrentValue;
+            $this->ACCOUNT_ID->ViewCustomAttributes = "";
+
+            // CLASS_ID_PLAFOND
+            $this->CLASS_ID_PLAFOND->ViewValue = $this->CLASS_ID_PLAFOND->CurrentValue;
+            $this->CLASS_ID_PLAFOND->ViewValue = FormatNumber($this->CLASS_ID_PLAFOND->ViewValue, 0, -2, -2, -2);
+            $this->CLASS_ID_PLAFOND->ViewCustomAttributes = "";
+
+            // BACKCHARGE
+            $this->BACKCHARGE->ViewValue = $this->BACKCHARGE->CurrentValue;
+            $this->BACKCHARGE->ViewCustomAttributes = "";
+
+            // COVERAGE_ID
+            $this->COVERAGE_ID->ViewValue = $this->COVERAGE_ID->CurrentValue;
+            $this->COVERAGE_ID->ViewValue = FormatNumber($this->COVERAGE_ID->ViewValue, 0, -2, -2, -2);
+            $this->COVERAGE_ID->ViewCustomAttributes = "";
+
+            // AGEYEAR
+            $this->AGEYEAR->ViewValue = $this->AGEYEAR->CurrentValue;
+            $this->AGEYEAR->ViewValue = FormatNumber($this->AGEYEAR->ViewValue, 0, -2, -2, -2);
+            $this->AGEYEAR->ViewCustomAttributes = "";
+
+            // AGEMONTH
+            $this->AGEMONTH->ViewValue = $this->AGEMONTH->CurrentValue;
+            $this->AGEMONTH->ViewValue = FormatNumber($this->AGEMONTH->ViewValue, 0, -2, -2, -2);
+            $this->AGEMONTH->ViewCustomAttributes = "";
+
+            // AGEDAY
+            $this->AGEDAY->ViewValue = $this->AGEDAY->CurrentValue;
+            $this->AGEDAY->ViewValue = FormatNumber($this->AGEDAY->ViewValue, 0, -2, -2, -2);
+            $this->AGEDAY->ViewCustomAttributes = "";
+
+            // RECOMENDATION
+            $this->RECOMENDATION->ViewValue = $this->RECOMENDATION->CurrentValue;
+            $this->RECOMENDATION->ViewCustomAttributes = "";
+
+            // CONCLUSION
+            $this->CONCLUSION->ViewValue = $this->CONCLUSION->CurrentValue;
+            $this->CONCLUSION->ViewCustomAttributes = "";
+
+            // SPECIMENNO
+            $this->SPECIMENNO->ViewValue = $this->SPECIMENNO->CurrentValue;
+            $this->SPECIMENNO->ViewCustomAttributes = "";
+
+            // LOCKED
+            $this->LOCKED->ViewValue = $this->LOCKED->CurrentValue;
+            $this->LOCKED->ViewCustomAttributes = "";
+
+            // RM_OUT_DATE
+            $this->RM_OUT_DATE->ViewValue = $this->RM_OUT_DATE->CurrentValue;
+            $this->RM_OUT_DATE->ViewValue = FormatDateTime($this->RM_OUT_DATE->ViewValue, 0);
+            $this->RM_OUT_DATE->ViewCustomAttributes = "";
+
+            // RM_IN_DATE
+            $this->RM_IN_DATE->ViewValue = $this->RM_IN_DATE->CurrentValue;
+            $this->RM_IN_DATE->ViewValue = FormatDateTime($this->RM_IN_DATE->ViewValue, 0);
+            $this->RM_IN_DATE->ViewCustomAttributes = "";
+
+            // LAMA_PINJAM
+            $this->LAMA_PINJAM->ViewValue = $this->LAMA_PINJAM->CurrentValue;
+            $this->LAMA_PINJAM->ViewValue = FormatDateTime($this->LAMA_PINJAM->ViewValue, 0);
+            $this->LAMA_PINJAM->ViewCustomAttributes = "";
+
+            // STANDAR_RJ
+            $this->STANDAR_RJ->ViewValue = $this->STANDAR_RJ->CurrentValue;
+            $this->STANDAR_RJ->ViewCustomAttributes = "";
+
+            // LENGKAP_RJ
+            $this->LENGKAP_RJ->ViewValue = $this->LENGKAP_RJ->CurrentValue;
+            $this->LENGKAP_RJ->ViewCustomAttributes = "";
+
+            // LENGKAP_RI
+            $this->LENGKAP_RI->ViewValue = $this->LENGKAP_RI->CurrentValue;
+            $this->LENGKAP_RI->ViewCustomAttributes = "";
+
+            // RESEND_RM_DATE
+            $this->RESEND_RM_DATE->ViewValue = $this->RESEND_RM_DATE->CurrentValue;
+            $this->RESEND_RM_DATE->ViewValue = FormatDateTime($this->RESEND_RM_DATE->ViewValue, 0);
+            $this->RESEND_RM_DATE->ViewCustomAttributes = "";
+
+            // LENGKAP_RM1
+            $this->LENGKAP_RM1->ViewValue = $this->LENGKAP_RM1->CurrentValue;
+            $this->LENGKAP_RM1->ViewCustomAttributes = "";
+
+            // LENGKAP_RESUME
+            $this->LENGKAP_RESUME->ViewValue = $this->LENGKAP_RESUME->CurrentValue;
+            $this->LENGKAP_RESUME->ViewCustomAttributes = "";
+
+            // LENGKAP_ANAMNESIS
+            $this->LENGKAP_ANAMNESIS->ViewValue = $this->LENGKAP_ANAMNESIS->CurrentValue;
+            $this->LENGKAP_ANAMNESIS->ViewCustomAttributes = "";
+
+            // LENGKAP_CONSENT
+            $this->LENGKAP_CONSENT->ViewValue = $this->LENGKAP_CONSENT->CurrentValue;
+            $this->LENGKAP_CONSENT->ViewCustomAttributes = "";
+
+            // LENGKAP_ANESTESI
+            $this->LENGKAP_ANESTESI->ViewValue = $this->LENGKAP_ANESTESI->CurrentValue;
+            $this->LENGKAP_ANESTESI->ViewCustomAttributes = "";
+
+            // LENGKAP_OP
+            $this->LENGKAP_OP->ViewValue = $this->LENGKAP_OP->CurrentValue;
+            $this->LENGKAP_OP->ViewCustomAttributes = "";
+
+            // BACK_RM_DATE
+            $this->BACK_RM_DATE->ViewValue = $this->BACK_RM_DATE->CurrentValue;
+            $this->BACK_RM_DATE->ViewValue = FormatDateTime($this->BACK_RM_DATE->ViewValue, 0);
+            $this->BACK_RM_DATE->ViewCustomAttributes = "";
+
+            // VALID_RM_DATE
+            $this->VALID_RM_DATE->ViewValue = $this->VALID_RM_DATE->CurrentValue;
+            $this->VALID_RM_DATE->ViewValue = FormatDateTime($this->VALID_RM_DATE->ViewValue, 0);
+            $this->VALID_RM_DATE->ViewCustomAttributes = "";
+
+            // NO_SKP
+            $this->NO_SKP->ViewValue = $this->NO_SKP->CurrentValue;
+            $this->NO_SKP->ViewCustomAttributes = "";
+
+            // NO_SKPINAP
+            $this->NO_SKPINAP->ViewValue = $this->NO_SKPINAP->CurrentValue;
+            $this->NO_SKPINAP->ViewCustomAttributes = "";
+
+            // DIAGNOSA_ID
+            $this->DIAGNOSA_ID->ViewValue = $this->DIAGNOSA_ID->CurrentValue;
+            $this->DIAGNOSA_ID->ViewCustomAttributes = "";
+
+            // ticket_all
+            $this->ticket_all->ViewValue = $this->ticket_all->CurrentValue;
+            $this->ticket_all->ViewValue = FormatNumber($this->ticket_all->ViewValue, 0, -2, -2, -2);
+            $this->ticket_all->ViewCustomAttributes = "";
+
+            // tanggal_rujukan
+            $this->tanggal_rujukan->ViewValue = $this->tanggal_rujukan->CurrentValue;
+            $this->tanggal_rujukan->ViewValue = FormatDateTime($this->tanggal_rujukan->ViewValue, 0);
+            $this->tanggal_rujukan->ViewCustomAttributes = "";
+
+            // ISRJ
+            $this->ISRJ->ViewValue = $this->ISRJ->CurrentValue;
+            $this->ISRJ->ViewCustomAttributes = "";
+
+            // NORUJUKAN
+            $this->NORUJUKAN->ViewValue = $this->NORUJUKAN->CurrentValue;
+            $this->NORUJUKAN->ViewCustomAttributes = "";
+
+            // PPKRUJUKAN
+            $this->PPKRUJUKAN->ViewValue = $this->PPKRUJUKAN->CurrentValue;
+            $this->PPKRUJUKAN->ViewCustomAttributes = "";
+
+            // LOKASILAKA
+            $this->LOKASILAKA->ViewValue = $this->LOKASILAKA->CurrentValue;
+            $this->LOKASILAKA->ViewCustomAttributes = "";
+
+            // KDPOLI
+            $this->KDPOLI->ViewValue = $this->KDPOLI->CurrentValue;
+            $this->KDPOLI->ViewCustomAttributes = "";
+
+            // EDIT_SEP
+            $this->EDIT_SEP->ViewValue = $this->EDIT_SEP->CurrentValue;
+            $this->EDIT_SEP->ViewCustomAttributes = "";
+
+            // DELETE_SEP
+            $this->DELETE_SEP->ViewValue = $this->DELETE_SEP->CurrentValue;
+            $this->DELETE_SEP->ViewCustomAttributes = "";
+
+            // KODE_AGAMA
+            $this->KODE_AGAMA->ViewValue = $this->KODE_AGAMA->CurrentValue;
+            $this->KODE_AGAMA->ViewValue = FormatNumber($this->KODE_AGAMA->ViewValue, 0, -2, -2, -2);
+            $this->KODE_AGAMA->ViewCustomAttributes = "";
+
+            // DIAG_AWAL
+            $this->DIAG_AWAL->ViewValue = $this->DIAG_AWAL->CurrentValue;
+            $this->DIAG_AWAL->ViewCustomAttributes = "";
+
+            // AKTIF
+            $this->AKTIF->ViewValue = $this->AKTIF->CurrentValue;
+            $this->AKTIF->ViewCustomAttributes = "";
+
+            // BILL_INAP
+            $this->BILL_INAP->ViewValue = $this->BILL_INAP->CurrentValue;
+            $this->BILL_INAP->ViewCustomAttributes = "";
+
+            // SEP_PRINTDATE
+            $this->SEP_PRINTDATE->ViewValue = $this->SEP_PRINTDATE->CurrentValue;
+            $this->SEP_PRINTDATE->ViewValue = FormatDateTime($this->SEP_PRINTDATE->ViewValue, 0);
+            $this->SEP_PRINTDATE->ViewCustomAttributes = "";
+
+            // MAPPING_SEP
+            $this->MAPPING_SEP->ViewValue = $this->MAPPING_SEP->CurrentValue;
+            $this->MAPPING_SEP->ViewCustomAttributes = "";
+
+            // TRANS_ID
+            $this->TRANS_ID->ViewValue = $this->TRANS_ID->CurrentValue;
+            $this->TRANS_ID->ViewCustomAttributes = "";
+
+            // KDPOLI_EKS
+            $this->KDPOLI_EKS->ViewValue = $this->KDPOLI_EKS->CurrentValue;
+            $this->KDPOLI_EKS->ViewCustomAttributes = "";
+
+            // COB
+            $this->COB->ViewValue = $this->COB->CurrentValue;
+            $this->COB->ViewCustomAttributes = "";
+
+            // PENJAMIN
+            $this->PENJAMIN->ViewValue = $this->PENJAMIN->CurrentValue;
+            $this->PENJAMIN->ViewCustomAttributes = "";
+
+            // ASALRUJUKAN
+            $this->ASALRUJUKAN->ViewValue = $this->ASALRUJUKAN->CurrentValue;
+            $this->ASALRUJUKAN->ViewCustomAttributes = "";
+
+            // RESPONSEP
+            $this->RESPONSEP->ViewValue = $this->RESPONSEP->CurrentValue;
+            $this->RESPONSEP->ViewCustomAttributes = "";
+
+            // APPROVAL_DESC
+            $this->APPROVAL_DESC->ViewValue = $this->APPROVAL_DESC->CurrentValue;
+            $this->APPROVAL_DESC->ViewCustomAttributes = "";
+
+            // APPROVAL_RESPONAJUKAN
+            $this->APPROVAL_RESPONAJUKAN->ViewValue = $this->APPROVAL_RESPONAJUKAN->CurrentValue;
+            $this->APPROVAL_RESPONAJUKAN->ViewCustomAttributes = "";
+
+            // APPROVAL_RESPONAPPROV
+            $this->APPROVAL_RESPONAPPROV->ViewValue = $this->APPROVAL_RESPONAPPROV->CurrentValue;
+            $this->APPROVAL_RESPONAPPROV->ViewCustomAttributes = "";
+
+            // RESPONTGLPLG_DESC
+            $this->RESPONTGLPLG_DESC->ViewValue = $this->RESPONTGLPLG_DESC->CurrentValue;
+            $this->RESPONTGLPLG_DESC->ViewCustomAttributes = "";
+
+            // RESPONPOST_VKLAIM
+            $this->RESPONPOST_VKLAIM->ViewValue = $this->RESPONPOST_VKLAIM->CurrentValue;
+            $this->RESPONPOST_VKLAIM->ViewCustomAttributes = "";
+
+            // RESPONPUT_VKLAIM
+            $this->RESPONPUT_VKLAIM->ViewValue = $this->RESPONPUT_VKLAIM->CurrentValue;
+            $this->RESPONPUT_VKLAIM->ViewCustomAttributes = "";
+
+            // RESPONDEL_VKLAIM
+            $this->RESPONDEL_VKLAIM->ViewValue = $this->RESPONDEL_VKLAIM->CurrentValue;
+            $this->RESPONDEL_VKLAIM->ViewCustomAttributes = "";
+
+            // CALL_TIMES
+            $this->CALL_TIMES->ViewValue = $this->CALL_TIMES->CurrentValue;
+            $this->CALL_TIMES->ViewValue = FormatNumber($this->CALL_TIMES->ViewValue, 0, -2, -2, -2);
+            $this->CALL_TIMES->ViewCustomAttributes = "";
+
+            // CALL_DATE
+            $this->CALL_DATE->ViewValue = $this->CALL_DATE->CurrentValue;
+            $this->CALL_DATE->ViewValue = FormatDateTime($this->CALL_DATE->ViewValue, 0);
+            $this->CALL_DATE->ViewCustomAttributes = "";
+
+            // CALL_DATES
+            $this->CALL_DATES->ViewValue = $this->CALL_DATES->CurrentValue;
+            $this->CALL_DATES->ViewValue = FormatDateTime($this->CALL_DATES->ViewValue, 0);
+            $this->CALL_DATES->ViewCustomAttributes = "";
+
+            // SERVED_DATE
+            $this->SERVED_DATE->ViewValue = $this->SERVED_DATE->CurrentValue;
+            $this->SERVED_DATE->ViewValue = FormatDateTime($this->SERVED_DATE->ViewValue, 0);
+            $this->SERVED_DATE->ViewCustomAttributes = "";
+
+            // SERVED_INAP
+            $this->SERVED_INAP->ViewValue = $this->SERVED_INAP->CurrentValue;
+            $this->SERVED_INAP->ViewValue = FormatDateTime($this->SERVED_INAP->ViewValue, 0);
+            $this->SERVED_INAP->ViewCustomAttributes = "";
+
+            // KDDPJP1
+            $this->KDDPJP1->ViewValue = $this->KDDPJP1->CurrentValue;
+            $this->KDDPJP1->ViewCustomAttributes = "";
+
+            // KDDPJP
+            $this->KDDPJP->ViewValue = $this->KDDPJP->CurrentValue;
+            $this->KDDPJP->ViewCustomAttributes = "";
+
+            // IDXDAFTAR
+            $this->IDXDAFTAR->ViewValue = $this->IDXDAFTAR->CurrentValue;
+            $this->IDXDAFTAR->ViewCustomAttributes = "";
+
+            // tgl_kontrol
+            $this->tgl_kontrol->ViewValue = $this->tgl_kontrol->CurrentValue;
+            $this->tgl_kontrol->ViewValue = FormatDateTime($this->tgl_kontrol->ViewValue, 0);
+            $this->tgl_kontrol->ViewCustomAttributes = "";
+
+            // ORG_UNIT_CODE
+            $this->ORG_UNIT_CODE->LinkCustomAttributes = "";
+            $this->ORG_UNIT_CODE->HrefValue = "";
+            $this->ORG_UNIT_CODE->TooltipValue = "";
+
+            // NO_REGISTRATION
+            $this->NO_REGISTRATION->LinkCustomAttributes = "";
+            $this->NO_REGISTRATION->HrefValue = "";
+            $this->NO_REGISTRATION->TooltipValue = "";
+
+            // VISIT_ID
+            $this->VISIT_ID->LinkCustomAttributes = "";
+            $this->VISIT_ID->HrefValue = "";
+            $this->VISIT_ID->TooltipValue = "";
+
+            // STATUS_PASIEN_ID
+            $this->STATUS_PASIEN_ID->LinkCustomAttributes = "";
+            $this->STATUS_PASIEN_ID->HrefValue = "";
+            $this->STATUS_PASIEN_ID->TooltipValue = "";
+
+            // RUJUKAN_ID
+            $this->RUJUKAN_ID->LinkCustomAttributes = "";
+            $this->RUJUKAN_ID->HrefValue = "";
+            $this->RUJUKAN_ID->TooltipValue = "";
+
+            // ADDRESS_OF_RUJUKAN
+            $this->ADDRESS_OF_RUJUKAN->LinkCustomAttributes = "";
+            $this->ADDRESS_OF_RUJUKAN->HrefValue = "";
+            $this->ADDRESS_OF_RUJUKAN->TooltipValue = "";
+
+            // REASON_ID
+            $this->REASON_ID->LinkCustomAttributes = "";
+            $this->REASON_ID->HrefValue = "";
+            $this->REASON_ID->TooltipValue = "";
+
+            // WAY_ID
+            $this->WAY_ID->LinkCustomAttributes = "";
+            $this->WAY_ID->HrefValue = "";
+            $this->WAY_ID->TooltipValue = "";
+
+            // PATIENT_CATEGORY_ID
+            $this->PATIENT_CATEGORY_ID->LinkCustomAttributes = "";
+            $this->PATIENT_CATEGORY_ID->HrefValue = "";
+            $this->PATIENT_CATEGORY_ID->TooltipValue = "";
+
+            // BOOKED_DATE
+            $this->BOOKED_DATE->LinkCustomAttributes = "";
+            $this->BOOKED_DATE->HrefValue = "";
+            $this->BOOKED_DATE->TooltipValue = "";
+
+            // VISIT_DATE
+            $this->VISIT_DATE->LinkCustomAttributes = "";
+            $this->VISIT_DATE->HrefValue = "";
+            $this->VISIT_DATE->TooltipValue = "";
+
+            // ISNEW
+            $this->ISNEW->LinkCustomAttributes = "";
+            $this->ISNEW->HrefValue = "";
+            $this->ISNEW->TooltipValue = "";
+
+            // FOLLOW_UP
+            $this->FOLLOW_UP->LinkCustomAttributes = "";
+            $this->FOLLOW_UP->HrefValue = "";
+            $this->FOLLOW_UP->TooltipValue = "";
+
+            // PLACE_TYPE
+            $this->PLACE_TYPE->LinkCustomAttributes = "";
+            $this->PLACE_TYPE->HrefValue = "";
+            $this->PLACE_TYPE->TooltipValue = "";
+
+            // CLINIC_ID
+            $this->CLINIC_ID->LinkCustomAttributes = "";
+            $this->CLINIC_ID->HrefValue = "";
+            $this->CLINIC_ID->TooltipValue = "";
+
+            // CLINIC_ID_FROM
+            $this->CLINIC_ID_FROM->LinkCustomAttributes = "";
+            $this->CLINIC_ID_FROM->HrefValue = "";
+            $this->CLINIC_ID_FROM->TooltipValue = "";
+
+            // CLASS_ROOM_ID
+            $this->CLASS_ROOM_ID->LinkCustomAttributes = "";
+            $this->CLASS_ROOM_ID->HrefValue = "";
+            $this->CLASS_ROOM_ID->TooltipValue = "";
+
+            // BED_ID
+            $this->BED_ID->LinkCustomAttributes = "";
+            $this->BED_ID->HrefValue = "";
+            $this->BED_ID->TooltipValue = "";
+
+            // KELUAR_ID
+            $this->KELUAR_ID->LinkCustomAttributes = "";
+            $this->KELUAR_ID->HrefValue = "";
+            $this->KELUAR_ID->TooltipValue = "";
+
+            // IN_DATE
+            $this->IN_DATE->LinkCustomAttributes = "";
+            $this->IN_DATE->HrefValue = "";
+            $this->IN_DATE->TooltipValue = "";
+
+            // EXIT_DATE
+            $this->EXIT_DATE->LinkCustomAttributes = "";
+            $this->EXIT_DATE->HrefValue = "";
+            $this->EXIT_DATE->TooltipValue = "";
+
+            // DIANTAR_OLEH
+            $this->DIANTAR_OLEH->LinkCustomAttributes = "";
+            $this->DIANTAR_OLEH->HrefValue = "";
+            $this->DIANTAR_OLEH->TooltipValue = "";
+
+            // GENDER
+            $this->GENDER->LinkCustomAttributes = "";
+            $this->GENDER->HrefValue = "";
+            $this->GENDER->TooltipValue = "";
+
+            // DESCRIPTION
+            $this->DESCRIPTION->LinkCustomAttributes = "";
+            $this->DESCRIPTION->HrefValue = "";
+            $this->DESCRIPTION->TooltipValue = "";
+
+            // VISITOR_ADDRESS
+            $this->VISITOR_ADDRESS->LinkCustomAttributes = "";
+            $this->VISITOR_ADDRESS->HrefValue = "";
+            $this->VISITOR_ADDRESS->TooltipValue = "";
+
+            // MODIFIED_BY
+            $this->MODIFIED_BY->LinkCustomAttributes = "";
+            $this->MODIFIED_BY->HrefValue = "";
+            $this->MODIFIED_BY->TooltipValue = "";
+
+            // MODIFIED_DATE
+            $this->MODIFIED_DATE->LinkCustomAttributes = "";
+            $this->MODIFIED_DATE->HrefValue = "";
+            $this->MODIFIED_DATE->TooltipValue = "";
+
+            // MODIFIED_FROM
+            $this->MODIFIED_FROM->LinkCustomAttributes = "";
+            $this->MODIFIED_FROM->HrefValue = "";
+            $this->MODIFIED_FROM->TooltipValue = "";
+
+            // EMPLOYEE_ID
+            $this->EMPLOYEE_ID->LinkCustomAttributes = "";
+            $this->EMPLOYEE_ID->HrefValue = "";
+            $this->EMPLOYEE_ID->TooltipValue = "";
+
+            // EMPLOYEE_ID_FROM
+            $this->EMPLOYEE_ID_FROM->LinkCustomAttributes = "";
+            $this->EMPLOYEE_ID_FROM->HrefValue = "";
+            $this->EMPLOYEE_ID_FROM->TooltipValue = "";
+
+            // RESPONSIBLE_ID
+            $this->RESPONSIBLE_ID->LinkCustomAttributes = "";
+            $this->RESPONSIBLE_ID->HrefValue = "";
+            $this->RESPONSIBLE_ID->TooltipValue = "";
+
+            // RESPONSIBLE
+            $this->RESPONSIBLE->LinkCustomAttributes = "";
+            $this->RESPONSIBLE->HrefValue = "";
+            $this->RESPONSIBLE->TooltipValue = "";
+
+            // FAMILY_STATUS_ID
+            $this->FAMILY_STATUS_ID->LinkCustomAttributes = "";
+            $this->FAMILY_STATUS_ID->HrefValue = "";
+            $this->FAMILY_STATUS_ID->TooltipValue = "";
+
+            // TICKET_NO
+            $this->TICKET_NO->LinkCustomAttributes = "";
+            $this->TICKET_NO->HrefValue = "";
+            $this->TICKET_NO->TooltipValue = "";
+
+            // ISATTENDED
+            $this->ISATTENDED->LinkCustomAttributes = "";
+            $this->ISATTENDED->HrefValue = "";
+            $this->ISATTENDED->TooltipValue = "";
+
+            // PAYOR_ID
+            $this->PAYOR_ID->LinkCustomAttributes = "";
+            $this->PAYOR_ID->HrefValue = "";
+            $this->PAYOR_ID->TooltipValue = "";
+
+            // CLASS_ID
+            $this->CLASS_ID->LinkCustomAttributes = "";
+            $this->CLASS_ID->HrefValue = "";
+            $this->CLASS_ID->TooltipValue = "";
+
+            // ISPERTARIF
+            $this->ISPERTARIF->LinkCustomAttributes = "";
+            $this->ISPERTARIF->HrefValue = "";
+            $this->ISPERTARIF->TooltipValue = "";
+
+            // KAL_ID
+            $this->KAL_ID->LinkCustomAttributes = "";
+            $this->KAL_ID->HrefValue = "";
+            $this->KAL_ID->TooltipValue = "";
+
+            // EMPLOYEE_INAP
+            $this->EMPLOYEE_INAP->LinkCustomAttributes = "";
+            $this->EMPLOYEE_INAP->HrefValue = "";
+            $this->EMPLOYEE_INAP->TooltipValue = "";
+
+            // PASIEN_ID
+            $this->PASIEN_ID->LinkCustomAttributes = "";
+            $this->PASIEN_ID->HrefValue = "";
+            $this->PASIEN_ID->TooltipValue = "";
+
+            // KARYAWAN
+            $this->KARYAWAN->LinkCustomAttributes = "";
+            $this->KARYAWAN->HrefValue = "";
+            $this->KARYAWAN->TooltipValue = "";
+
+            // ACCOUNT_ID
+            $this->ACCOUNT_ID->LinkCustomAttributes = "";
+            $this->ACCOUNT_ID->HrefValue = "";
+            $this->ACCOUNT_ID->TooltipValue = "";
+
+            // CLASS_ID_PLAFOND
+            $this->CLASS_ID_PLAFOND->LinkCustomAttributes = "";
+            $this->CLASS_ID_PLAFOND->HrefValue = "";
+            $this->CLASS_ID_PLAFOND->TooltipValue = "";
+
+            // BACKCHARGE
+            $this->BACKCHARGE->LinkCustomAttributes = "";
+            $this->BACKCHARGE->HrefValue = "";
+            $this->BACKCHARGE->TooltipValue = "";
+
+            // COVERAGE_ID
+            $this->COVERAGE_ID->LinkCustomAttributes = "";
+            $this->COVERAGE_ID->HrefValue = "";
+            $this->COVERAGE_ID->TooltipValue = "";
+
+            // AGEYEAR
+            $this->AGEYEAR->LinkCustomAttributes = "";
+            $this->AGEYEAR->HrefValue = "";
+            $this->AGEYEAR->TooltipValue = "";
+
+            // AGEMONTH
+            $this->AGEMONTH->LinkCustomAttributes = "";
+            $this->AGEMONTH->HrefValue = "";
+            $this->AGEMONTH->TooltipValue = "";
+
+            // AGEDAY
+            $this->AGEDAY->LinkCustomAttributes = "";
+            $this->AGEDAY->HrefValue = "";
+            $this->AGEDAY->TooltipValue = "";
+
+            // RECOMENDATION
+            $this->RECOMENDATION->LinkCustomAttributes = "";
+            $this->RECOMENDATION->HrefValue = "";
+            $this->RECOMENDATION->TooltipValue = "";
+
+            // CONCLUSION
+            $this->CONCLUSION->LinkCustomAttributes = "";
+            $this->CONCLUSION->HrefValue = "";
+            $this->CONCLUSION->TooltipValue = "";
+
+            // SPECIMENNO
+            $this->SPECIMENNO->LinkCustomAttributes = "";
+            $this->SPECIMENNO->HrefValue = "";
+            $this->SPECIMENNO->TooltipValue = "";
+
+            // LOCKED
+            $this->LOCKED->LinkCustomAttributes = "";
+            $this->LOCKED->HrefValue = "";
+            $this->LOCKED->TooltipValue = "";
+
+            // RM_OUT_DATE
+            $this->RM_OUT_DATE->LinkCustomAttributes = "";
+            $this->RM_OUT_DATE->HrefValue = "";
+            $this->RM_OUT_DATE->TooltipValue = "";
+
+            // RM_IN_DATE
+            $this->RM_IN_DATE->LinkCustomAttributes = "";
+            $this->RM_IN_DATE->HrefValue = "";
+            $this->RM_IN_DATE->TooltipValue = "";
+
+            // LAMA_PINJAM
+            $this->LAMA_PINJAM->LinkCustomAttributes = "";
+            $this->LAMA_PINJAM->HrefValue = "";
+            $this->LAMA_PINJAM->TooltipValue = "";
+
+            // STANDAR_RJ
+            $this->STANDAR_RJ->LinkCustomAttributes = "";
+            $this->STANDAR_RJ->HrefValue = "";
+            $this->STANDAR_RJ->TooltipValue = "";
+
+            // LENGKAP_RJ
+            $this->LENGKAP_RJ->LinkCustomAttributes = "";
+            $this->LENGKAP_RJ->HrefValue = "";
+            $this->LENGKAP_RJ->TooltipValue = "";
+
+            // LENGKAP_RI
+            $this->LENGKAP_RI->LinkCustomAttributes = "";
+            $this->LENGKAP_RI->HrefValue = "";
+            $this->LENGKAP_RI->TooltipValue = "";
+
+            // RESEND_RM_DATE
+            $this->RESEND_RM_DATE->LinkCustomAttributes = "";
+            $this->RESEND_RM_DATE->HrefValue = "";
+            $this->RESEND_RM_DATE->TooltipValue = "";
+
+            // LENGKAP_RM1
+            $this->LENGKAP_RM1->LinkCustomAttributes = "";
+            $this->LENGKAP_RM1->HrefValue = "";
+            $this->LENGKAP_RM1->TooltipValue = "";
+
+            // LENGKAP_RESUME
+            $this->LENGKAP_RESUME->LinkCustomAttributes = "";
+            $this->LENGKAP_RESUME->HrefValue = "";
+            $this->LENGKAP_RESUME->TooltipValue = "";
+
+            // LENGKAP_ANAMNESIS
+            $this->LENGKAP_ANAMNESIS->LinkCustomAttributes = "";
+            $this->LENGKAP_ANAMNESIS->HrefValue = "";
+            $this->LENGKAP_ANAMNESIS->TooltipValue = "";
+
+            // LENGKAP_CONSENT
+            $this->LENGKAP_CONSENT->LinkCustomAttributes = "";
+            $this->LENGKAP_CONSENT->HrefValue = "";
+            $this->LENGKAP_CONSENT->TooltipValue = "";
+
+            // LENGKAP_ANESTESI
+            $this->LENGKAP_ANESTESI->LinkCustomAttributes = "";
+            $this->LENGKAP_ANESTESI->HrefValue = "";
+            $this->LENGKAP_ANESTESI->TooltipValue = "";
+
+            // LENGKAP_OP
+            $this->LENGKAP_OP->LinkCustomAttributes = "";
+            $this->LENGKAP_OP->HrefValue = "";
+            $this->LENGKAP_OP->TooltipValue = "";
+
+            // BACK_RM_DATE
+            $this->BACK_RM_DATE->LinkCustomAttributes = "";
+            $this->BACK_RM_DATE->HrefValue = "";
+            $this->BACK_RM_DATE->TooltipValue = "";
+
+            // VALID_RM_DATE
+            $this->VALID_RM_DATE->LinkCustomAttributes = "";
+            $this->VALID_RM_DATE->HrefValue = "";
+            $this->VALID_RM_DATE->TooltipValue = "";
+
+            // NO_SKP
+            $this->NO_SKP->LinkCustomAttributes = "";
+            $this->NO_SKP->HrefValue = "";
+            $this->NO_SKP->TooltipValue = "";
+
+            // NO_SKPINAP
+            $this->NO_SKPINAP->LinkCustomAttributes = "";
+            $this->NO_SKPINAP->HrefValue = "";
+            $this->NO_SKPINAP->TooltipValue = "";
+
+            // DIAGNOSA_ID
+            $this->DIAGNOSA_ID->LinkCustomAttributes = "";
+            $this->DIAGNOSA_ID->HrefValue = "";
+            $this->DIAGNOSA_ID->TooltipValue = "";
+
+            // ticket_all
+            $this->ticket_all->LinkCustomAttributes = "";
+            $this->ticket_all->HrefValue = "";
+            $this->ticket_all->TooltipValue = "";
+
+            // tanggal_rujukan
+            $this->tanggal_rujukan->LinkCustomAttributes = "";
+            $this->tanggal_rujukan->HrefValue = "";
+            $this->tanggal_rujukan->TooltipValue = "";
+
+            // ISRJ
+            $this->ISRJ->LinkCustomAttributes = "";
+            $this->ISRJ->HrefValue = "";
+            $this->ISRJ->TooltipValue = "";
+
+            // NORUJUKAN
+            $this->NORUJUKAN->LinkCustomAttributes = "";
+            $this->NORUJUKAN->HrefValue = "";
+            $this->NORUJUKAN->TooltipValue = "";
+
+            // PPKRUJUKAN
+            $this->PPKRUJUKAN->LinkCustomAttributes = "";
+            $this->PPKRUJUKAN->HrefValue = "";
+            $this->PPKRUJUKAN->TooltipValue = "";
+
+            // LOKASILAKA
+            $this->LOKASILAKA->LinkCustomAttributes = "";
+            $this->LOKASILAKA->HrefValue = "";
+            $this->LOKASILAKA->TooltipValue = "";
+
+            // KDPOLI
+            $this->KDPOLI->LinkCustomAttributes = "";
+            $this->KDPOLI->HrefValue = "";
+            $this->KDPOLI->TooltipValue = "";
+
+            // EDIT_SEP
+            $this->EDIT_SEP->LinkCustomAttributes = "";
+            $this->EDIT_SEP->HrefValue = "";
+            $this->EDIT_SEP->TooltipValue = "";
+
+            // DELETE_SEP
+            $this->DELETE_SEP->LinkCustomAttributes = "";
+            $this->DELETE_SEP->HrefValue = "";
+            $this->DELETE_SEP->TooltipValue = "";
+
+            // KODE_AGAMA
+            $this->KODE_AGAMA->LinkCustomAttributes = "";
+            $this->KODE_AGAMA->HrefValue = "";
+            $this->KODE_AGAMA->TooltipValue = "";
+
+            // DIAG_AWAL
+            $this->DIAG_AWAL->LinkCustomAttributes = "";
+            $this->DIAG_AWAL->HrefValue = "";
+            $this->DIAG_AWAL->TooltipValue = "";
+
+            // AKTIF
+            $this->AKTIF->LinkCustomAttributes = "";
+            $this->AKTIF->HrefValue = "";
+            $this->AKTIF->TooltipValue = "";
+
+            // BILL_INAP
+            $this->BILL_INAP->LinkCustomAttributes = "";
+            $this->BILL_INAP->HrefValue = "";
+            $this->BILL_INAP->TooltipValue = "";
+
+            // SEP_PRINTDATE
+            $this->SEP_PRINTDATE->LinkCustomAttributes = "";
+            $this->SEP_PRINTDATE->HrefValue = "";
+            $this->SEP_PRINTDATE->TooltipValue = "";
+
+            // MAPPING_SEP
+            $this->MAPPING_SEP->LinkCustomAttributes = "";
+            $this->MAPPING_SEP->HrefValue = "";
+            $this->MAPPING_SEP->TooltipValue = "";
+
+            // TRANS_ID
+            $this->TRANS_ID->LinkCustomAttributes = "";
+            $this->TRANS_ID->HrefValue = "";
+            $this->TRANS_ID->TooltipValue = "";
+
+            // KDPOLI_EKS
+            $this->KDPOLI_EKS->LinkCustomAttributes = "";
+            $this->KDPOLI_EKS->HrefValue = "";
+            $this->KDPOLI_EKS->TooltipValue = "";
+
+            // COB
+            $this->COB->LinkCustomAttributes = "";
+            $this->COB->HrefValue = "";
+            $this->COB->TooltipValue = "";
+
+            // PENJAMIN
+            $this->PENJAMIN->LinkCustomAttributes = "";
+            $this->PENJAMIN->HrefValue = "";
+            $this->PENJAMIN->TooltipValue = "";
+
+            // ASALRUJUKAN
+            $this->ASALRUJUKAN->LinkCustomAttributes = "";
+            $this->ASALRUJUKAN->HrefValue = "";
+            $this->ASALRUJUKAN->TooltipValue = "";
+
+            // RESPONSEP
+            $this->RESPONSEP->LinkCustomAttributes = "";
+            $this->RESPONSEP->HrefValue = "";
+            $this->RESPONSEP->TooltipValue = "";
+
+            // APPROVAL_DESC
+            $this->APPROVAL_DESC->LinkCustomAttributes = "";
+            $this->APPROVAL_DESC->HrefValue = "";
+            $this->APPROVAL_DESC->TooltipValue = "";
+
+            // APPROVAL_RESPONAJUKAN
+            $this->APPROVAL_RESPONAJUKAN->LinkCustomAttributes = "";
+            $this->APPROVAL_RESPONAJUKAN->HrefValue = "";
+            $this->APPROVAL_RESPONAJUKAN->TooltipValue = "";
+
+            // APPROVAL_RESPONAPPROV
+            $this->APPROVAL_RESPONAPPROV->LinkCustomAttributes = "";
+            $this->APPROVAL_RESPONAPPROV->HrefValue = "";
+            $this->APPROVAL_RESPONAPPROV->TooltipValue = "";
+
+            // RESPONTGLPLG_DESC
+            $this->RESPONTGLPLG_DESC->LinkCustomAttributes = "";
+            $this->RESPONTGLPLG_DESC->HrefValue = "";
+            $this->RESPONTGLPLG_DESC->TooltipValue = "";
+
+            // RESPONPOST_VKLAIM
+            $this->RESPONPOST_VKLAIM->LinkCustomAttributes = "";
+            $this->RESPONPOST_VKLAIM->HrefValue = "";
+            $this->RESPONPOST_VKLAIM->TooltipValue = "";
+
+            // RESPONPUT_VKLAIM
+            $this->RESPONPUT_VKLAIM->LinkCustomAttributes = "";
+            $this->RESPONPUT_VKLAIM->HrefValue = "";
+            $this->RESPONPUT_VKLAIM->TooltipValue = "";
+
+            // RESPONDEL_VKLAIM
+            $this->RESPONDEL_VKLAIM->LinkCustomAttributes = "";
+            $this->RESPONDEL_VKLAIM->HrefValue = "";
+            $this->RESPONDEL_VKLAIM->TooltipValue = "";
+
+            // CALL_TIMES
+            $this->CALL_TIMES->LinkCustomAttributes = "";
+            $this->CALL_TIMES->HrefValue = "";
+            $this->CALL_TIMES->TooltipValue = "";
+
+            // CALL_DATE
+            $this->CALL_DATE->LinkCustomAttributes = "";
+            $this->CALL_DATE->HrefValue = "";
+            $this->CALL_DATE->TooltipValue = "";
+
+            // CALL_DATES
+            $this->CALL_DATES->LinkCustomAttributes = "";
+            $this->CALL_DATES->HrefValue = "";
+            $this->CALL_DATES->TooltipValue = "";
+
+            // SERVED_DATE
+            $this->SERVED_DATE->LinkCustomAttributes = "";
+            $this->SERVED_DATE->HrefValue = "";
+            $this->SERVED_DATE->TooltipValue = "";
+
+            // SERVED_INAP
+            $this->SERVED_INAP->LinkCustomAttributes = "";
+            $this->SERVED_INAP->HrefValue = "";
+            $this->SERVED_INAP->TooltipValue = "";
+
+            // KDDPJP1
+            $this->KDDPJP1->LinkCustomAttributes = "";
+            $this->KDDPJP1->HrefValue = "";
+            $this->KDDPJP1->TooltipValue = "";
+
+            // KDDPJP
+            $this->KDDPJP->LinkCustomAttributes = "";
+            $this->KDDPJP->HrefValue = "";
+            $this->KDDPJP->TooltipValue = "";
+
+            // IDXDAFTAR
+            $this->IDXDAFTAR->LinkCustomAttributes = "";
+            $this->IDXDAFTAR->HrefValue = "";
+            $this->IDXDAFTAR->TooltipValue = "";
+
+            // tgl_kontrol
+            $this->tgl_kontrol->LinkCustomAttributes = "";
+            $this->tgl_kontrol->HrefValue = "";
+            $this->tgl_kontrol->TooltipValue = "";
+        }
+
+        // Call Row Rendered event
+        if ($this->RowType != ROWTYPE_AGGREGATEINIT) {
+            $this->rowRendered();
+        }
+    }
+
+    // Set up search options
+    protected function setupSearchOptions()
+    {
+        global $Language, $Security;
+        $pageUrl = $this->pageUrl();
+        $this->SearchOptions = new ListOptions("div");
+        $this->SearchOptions->TagClassName = "ew-search-option";
+
+        // Search button
+        $item = &$this->SearchOptions->add("searchtoggle");
+        $searchToggleClass = ($this->SearchWhere != "") ? " active" : " active";
+        $item->Body = "<a class=\"btn btn-default ew-search-toggle" . $searchToggleClass . "\" href=\"#\" role=\"button\" title=\"" . $Language->phrase("SearchPanel") . "\" data-caption=\"" . $Language->phrase("SearchPanel") . "\" data-toggle=\"button\" data-form=\"fV_LABORATORIUMlistsrch\" aria-pressed=\"" . ($searchToggleClass == " active" ? "true" : "false") . "\">" . $Language->phrase("SearchLink") . "</a>";
+        $item->Visible = true;
+
+        // Show all button
+        $item = &$this->SearchOptions->add("showall");
+        $item->Body = "<a class=\"btn btn-default ew-show-all\" title=\"" . $Language->phrase("ShowAll") . "\" data-caption=\"" . $Language->phrase("ShowAll") . "\" href=\"" . $pageUrl . "cmd=reset\">" . $Language->phrase("ShowAllBtn") . "</a>";
+        $item->Visible = ($this->SearchWhere != $this->DefaultSearchWhere && $this->SearchWhere != "0=101");
+
+        // Button group for search
+        $this->SearchOptions->UseDropDownButton = false;
+        $this->SearchOptions->UseButtonGroup = true;
+        $this->SearchOptions->DropDownButtonPhrase = $Language->phrase("ButtonSearch");
+
+        // Add group option item
+        $item = &$this->SearchOptions->add($this->SearchOptions->GroupOptionName);
+        $item->Body = "";
+        $item->Visible = false;
+
+        // Hide search options
+        if ($this->isExport() || $this->CurrentAction) {
+            $this->SearchOptions->hideAllOptions();
+        }
+        if (!$Security->canSearch()) {
+            $this->SearchOptions->hideAllOptions();
+            $this->FilterOptions->hideAllOptions();
+        }
+    }
+
+    // Set up Breadcrumb
+    protected function setupBreadcrumb()
+    {
+        global $Breadcrumb, $Language;
+        $Breadcrumb = new Breadcrumb("index");
+        $url = CurrentUrl();
+        $url = preg_replace('/\?cmd=reset(all){0,1}$/i', '', $url); // Remove cmd=reset / cmd=resetall
+        $Breadcrumb->add("list", $this->TableVar, $url, "", $this->TableVar, true);
+    }
+
+    // Setup lookup options
+    public function setupLookupOptions($fld)
+    {
+        if ($fld->Lookup !== null && $fld->Lookup->Options === null) {
+            // Get default connection and filter
+            $conn = $this->getConnection();
+            $lookupFilter = "";
+
+            // No need to check any more
+            $fld->Lookup->Options = [];
+
+            // Set up lookup SQL and connection
+            switch ($fld->FieldVar) {
+                default:
+                    $lookupFilter = "";
+                    break;
+            }
+
+            // Always call to Lookup->getSql so that user can setup Lookup->Options in Lookup_Selecting server event
+            $sql = $fld->Lookup->getSql(false, "", $lookupFilter, $this);
+
+            // Set up lookup cache
+            if ($fld->UseLookupCache && $sql != "" && count($fld->Lookup->Options) == 0) {
+                $totalCnt = $this->getRecordCount($sql, $conn);
+                if ($totalCnt > $fld->LookupCacheCount) { // Total count > cache count, do not cache
+                    return;
+                }
+                $rows = $conn->executeQuery($sql)->fetchAll(\PDO::FETCH_BOTH);
+                $ar = [];
+                foreach ($rows as $row) {
+                    $row = $fld->Lookup->renderViewRow($row);
+                    $ar[strval($row[0])] = $row;
+                }
+                $fld->Lookup->Options = $ar;
+            }
+        }
+    }
+
+    // Set up starting record parameters
+    public function setupStartRecord()
+    {
+        if ($this->DisplayRecords == 0) {
+            return;
+        }
+        if ($this->isPageRequest()) { // Validate request
+            $startRec = Get(Config("TABLE_START_REC"));
+            $pageNo = Get(Config("TABLE_PAGE_NO"));
+            if ($pageNo !== null) { // Check for "pageno" parameter first
+                if (is_numeric($pageNo)) {
+                    $this->StartRecord = ($pageNo - 1) * $this->DisplayRecords + 1;
+                    if ($this->StartRecord <= 0) {
+                        $this->StartRecord = 1;
+                    } elseif ($this->StartRecord >= (int)(($this->TotalRecords - 1) / $this->DisplayRecords) * $this->DisplayRecords + 1) {
+                        $this->StartRecord = (int)(($this->TotalRecords - 1) / $this->DisplayRecords) * $this->DisplayRecords + 1;
+                    }
+                    $this->setStartRecordNumber($this->StartRecord);
+                }
+            } elseif ($startRec !== null) { // Check for "start" parameter
+                $this->StartRecord = $startRec;
+                $this->setStartRecordNumber($this->StartRecord);
+            }
+        }
+        $this->StartRecord = $this->getStartRecordNumber();
+
+        // Check if correct start record counter
+        if (!is_numeric($this->StartRecord) || $this->StartRecord == "") { // Avoid invalid start record counter
+            $this->StartRecord = 1; // Reset start record counter
+            $this->setStartRecordNumber($this->StartRecord);
+        } elseif ($this->StartRecord > $this->TotalRecords) { // Avoid starting record > total records
+            $this->StartRecord = (int)(($this->TotalRecords - 1) / $this->DisplayRecords) * $this->DisplayRecords + 1; // Point to last page first record
+            $this->setStartRecordNumber($this->StartRecord);
+        } elseif (($this->StartRecord - 1) % $this->DisplayRecords != 0) {
+            $this->StartRecord = (int)(($this->StartRecord - 1) / $this->DisplayRecords) * $this->DisplayRecords + 1; // Point to page boundary
+            $this->setStartRecordNumber($this->StartRecord);
+        }
+    }
+
+    // Page Load event
+    public function pageLoad()
+    {
+        //Log("Page Load");
+    }
+
+    // Page Unload event
+    public function pageUnload()
+    {
+        //Log("Page Unload");
+    }
+
+    // Page Redirecting event
+    public function pageRedirecting(&$url)
+    {
+        // Example:
+        //$url = "your URL";
+    }
+
+    // Message Showing event
+    // $type = ''|'success'|'failure'|'warning'
+    public function messageShowing(&$msg, $type)
+    {
+        if ($type == 'success') {
+            //$msg = "your success message";
+        } elseif ($type == 'failure') {
+            //$msg = "your failure message";
+        } elseif ($type == 'warning') {
+            //$msg = "your warning message";
+        } else {
+            //$msg = "your message";
+        }
+    }
+
+    // Page Render event
+    public function pageRender()
+    {
+        //Log("Page Render");
+    }
+
+    // Page Data Rendering event
+    public function pageDataRendering(&$header)
+    {
+        // Example:
+        //$header = "your header";
+    }
+
+    // Page Data Rendered event
+    public function pageDataRendered(&$footer)
+    {
+        // Example:
+        //$footer = "your footer";
+    }
+
+    // Form Custom Validate event
+    public function formCustomValidate(&$customError)
+    {
+        // Return error message in CustomError
+        return true;
+    }
+
+    // ListOptions Load event
+    public function listOptionsLoad()
+    {
+        // Example:
+        //$opt = &$this->ListOptions->Add("new");
+        //$opt->Header = "xxx";
+        //$opt->OnLeft = true; // Link on left
+        //$opt->MoveTo(0); // Move to first column
+    }
+
+    // ListOptions Rendering event
+    public function listOptionsRendering()
+    {
+        //Container("DetailTableGrid")->DetailAdd = (...condition...); // Set to true or false conditionally
+        //Container("DetailTableGrid")->DetailEdit = (...condition...); // Set to true or false conditionally
+        //Container("DetailTableGrid")->DetailView = (...condition...); // Set to true or false conditionally
+    }
+
+    // ListOptions Rendered event
+    public function listOptionsRendered()
+    {
+        // Example:
+        //$this->ListOptions["new"]->Body = "xxx";
+    }
+
+    // Row Custom Action event
+    public function rowCustomAction($action, $row)
+    {
+        // Return false to abort
+        return true;
+    }
+
+    // Page Exporting event
+    // $this->ExportDoc = export document object
+    public function pageExporting()
+    {
+        //$this->ExportDoc->Text = "my header"; // Export header
+        //return false; // Return false to skip default export and use Row_Export event
+        return true; // Return true to use default export and skip Row_Export event
+    }
+
+    // Row Export event
+    // $this->ExportDoc = export document object
+    public function rowExport($rs)
+    {
+        //$this->ExportDoc->Text .= "my content"; // Build HTML with field value: $rs["MyField"] or $this->MyField->ViewValue
+    }
+
+    // Page Exported event
+    // $this->ExportDoc = export document object
+    public function pageExported()
+    {
+        //$this->ExportDoc->Text .= "my footer"; // Export footer
+        //Log($this->ExportDoc->Text);
+    }
+
+    // Page Importing event
+    public function pageImporting($reader, &$options)
+    {
+        //var_dump($reader); // Import data reader
+        //var_dump($options); // Show all options for importing
+        //return false; // Return false to skip import
+        return true;
+    }
+
+    // Row Import event
+    public function rowImport(&$row, $cnt)
+    {
+        //Log($cnt); // Import record count
+        //var_dump($row); // Import row
+        //return false; // Return false to skip import
+        return true;
+    }
+
+    // Page Imported event
+    public function pageImported($reader, $results)
+    {
+        //var_dump($reader); // Import data reader
+        //var_dump($results); // Import results
+    }
+}

@@ -1,0 +1,27 @@
+( (
+		(
+			(
+				(
+					(
+						CONVERT ( [varchar] ( 4 ), datepart( YEAR, getdate( ) ), ( 0 ) ) + RIGHT (
+							CONVERT ( [varchar] ( 4 ), datepart( MONTH, getdate( ) ) + ( 100 ), ( 0 ) ),
+							( 2 ) 
+						) 
+						) + RIGHT (
+						CONVERT ( [varchar] ( 3 ), datepart( DAY, getdate( ) ) + ( 100 ), ( 0 ) ),
+						( 2 ) 
+					) 
+					) + RIGHT (
+					CONVERT ( [varchar] ( 3 ), datepart( HOUR, getdate( ) ) + ( 100 ), ( 0 ) ),
+					( 2 ) 
+				) 
+				) + RIGHT (
+				CONVERT ( [varchar] ( 3 ), datepart( MINUTE, getdate( ) ) + ( 100 ), ( 0 ) ),
+				( 2 ) 
+			) 
+			) + RIGHT (
+			CONVERT ( [varchar] ( 3 ), datepart( SECOND, getdate( ) ) + ( 100 ), ( 0 ) ),
+			( 2 ) 
+		) 
+	) + LEFT ( newid( ), ( 7 ) ) 
+)

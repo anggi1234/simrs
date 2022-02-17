@@ -1,0 +1,22 @@
+-- tambahkan kolom ID
+ALTER TABLE TREATMENT_BILL ADD ID varchar(50) DEFAULT newid() NULL;
+
+-- isi kolom ID dengan unique identifier
+UPDATE TREATMENT_BILL SET ID = newid() ;
+
+-- lihat hasilnya
+SELECT ID, * FROM TREATMENT_BILL;
+
+-- persiapan pembuatan primary key,
+-- kolom ID disetting NOT NULL
+ALTER TABLE TREATMENT_BILL ALTER COLUMN ID varchar(50) NOT NULL;
+
+-- menghapus PK untuk nantinya dipanti PK baru
+--  catat dulu nama primary key yang ada tabel tersebut,
+-- disini namanya PK_TREATMENT_BILL
+ALTER TABLE TREATMENT_BILL DROP CONSTRAINT PK_TREATMENT_BILL;
+
+-- membuat PK baru
+-- gunakan nama primary key yang sama aja
+ALTER TABLE TREATMENT_BILL
+   ADD CONSTRAINT PK_TREATMENT_BILL PRIMARY KEY CLUSTERED (ID);

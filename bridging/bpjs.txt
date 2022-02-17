@@ -1,0 +1,28 @@
+$kelas = $response->response->peserta->hakKelas->kode
+$jnspeserta = $response->response->peserta->jenisPeserta->kode
+$nama = $response->response->peserta->nama
+$nik = $response->response->peserta->nik
+$pisa = $response->response->peserta->pisa
+$penyedia = $response->response->peserta->provUmum->nmProvider
+$sex = $response->response->peserta->sex
+$status = $response->response->peserta->statusPeserta->kode
+$cetak = $response->response->peserta->tglCetakKartu
+$lahir = $response->response->peserta->tglLahir
+$tat = $response->response->peserta->tglTAT
+$tmt = $response->response->peserta->tglTMT
+$umur = $response->response->peserta->umur->umurSekarang
+
+kelas = '$kelas';
+id_jnspeserta = '$jnspeserta'; 
+nama = '$nama';
+noktp = '$nik';
+pisa = '$pisa';
+bpjs_penyedia = '$penyedia';
+jeniskelamin = '$sex';
+bpjs_status = '$status';
+bpjs_cetak = '$cetak';
+tgllahir = '$lahir';
+bpjs_tat = '$tat';
+bpjs_tmt = '$tmt';
+umur = '$umur';
+

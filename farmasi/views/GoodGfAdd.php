@@ -1,0 +1,257 @@
+<?php
+
+namespace PHPMaker2021\SIMRSFARMASI;
+
+// Page object
+$GoodGfAdd = &$Page;
+?>
+<script>
+var currentForm, currentPageID;
+var fGOOD_GFadd;
+loadjs.ready("head", function () {
+    var $ = jQuery;
+    // Form object
+    currentPageID = ew.PAGE_ID = "add";
+    fGOOD_GFadd = currentForm = new ew.Form("fGOOD_GFadd", "add");
+
+    // Add fields
+    var currentTable = <?= JsonEncode(GetClientVar("tables", "GOOD_GF")) ?>,
+        fields = currentTable.fields;
+    if (!ew.vars.tables.GOOD_GF)
+        ew.vars.tables.GOOD_GF = currentTable;
+    fGOOD_GFadd.addFields([
+        ["BATCH_NO", [fields.BATCH_NO.visible && fields.BATCH_NO.required ? ew.Validators.required(fields.BATCH_NO.caption) : null], fields.BATCH_NO.isInvalid],
+        ["BRAND_ID", [fields.BRAND_ID.visible && fields.BRAND_ID.required ? ew.Validators.required(fields.BRAND_ID.caption) : null], fields.BRAND_ID.isInvalid],
+        ["ROOMS_ID", [fields.ROOMS_ID.visible && fields.ROOMS_ID.required ? ew.Validators.required(fields.ROOMS_ID.caption) : null], fields.ROOMS_ID.isInvalid],
+        ["EXPIRY_DATE", [fields.EXPIRY_DATE.visible && fields.EXPIRY_DATE.required ? ew.Validators.required(fields.EXPIRY_DATE.caption) : null, ew.Validators.datetime(0)], fields.EXPIRY_DATE.isInvalid],
+        ["ISOUTLET", [fields.ISOUTLET.visible && fields.ISOUTLET.required ? ew.Validators.required(fields.ISOUTLET.caption) : null], fields.ISOUTLET.isInvalid],
+        ["QUANTITY", [fields.QUANTITY.visible && fields.QUANTITY.required ? ew.Validators.required(fields.QUANTITY.caption) : null, ew.Validators.float], fields.QUANTITY.isInvalid],
+        ["ALLOCATED_FROM", [fields.ALLOCATED_FROM.visible && fields.ALLOCATED_FROM.required ? ew.Validators.required(fields.ALLOCATED_FROM.caption) : null], fields.ALLOCATED_FROM.isInvalid],
+        ["DIJUAL", [fields.DIJUAL.visible && fields.DIJUAL.required ? ew.Validators.required(fields.DIJUAL.caption) : null, ew.Validators.float], fields.DIJUAL.isInvalid]
+    ]);
+
+    // Set invalid fields
+    $(function() {
+        var f = fGOOD_GFadd,
+            fobj = f.getForm(),
+            $fobj = $(fobj),
+            $k = $fobj.find("#" + f.formKeyCountName), // Get key_count
+            rowcnt = ($k[0]) ? parseInt($k.val(), 10) : 1,
+            startcnt = (rowcnt == 0) ? 0 : 1; // Check rowcnt == 0 => Inline-Add
+        for (var i = startcnt; i <= rowcnt; i++) {
+            var rowIndex = ($k[0]) ? String(i) : "";
+            f.setInvalid(rowIndex);
+        }
+    });
+
+    // Validate form
+    fGOOD_GFadd.validate = function () {
+        if (!this.validateRequired)
+            return true; // Ignore validation
+        var fobj = this.getForm(),
+            $fobj = $(fobj);
+        if ($fobj.find("#confirm").val() == "confirm")
+            return true;
+        var addcnt = 0,
+            $k = $fobj.find("#" + this.formKeyCountName), // Get key_count
+            rowcnt = ($k[0]) ? parseInt($k.val(), 10) : 1,
+            startcnt = (rowcnt == 0) ? 0 : 1, // Check rowcnt == 0 => Inline-Add
+            gridinsert = ["insert", "gridinsert"].includes($fobj.find("#action").val()) && $k[0];
+        for (var i = startcnt; i <= rowcnt; i++) {
+            var rowIndex = ($k[0]) ? String(i) : "";
+            $fobj.data("rowindex", rowIndex);
+
+            // Validate fields
+            if (!this.validateFields(rowIndex))
+                return false;
+
+            // Call Form_CustomValidate event
+            if (!this.customValidate(fobj)) {
+                this.focus();
+                return false;
+            }
+        }
+
+        // Process detail forms
+        var dfs = $fobj.find("input[name='detailpage']").get();
+        for (var i = 0; i < dfs.length; i++) {
+            var df = dfs[i],
+                val = df.value,
+                frm = ew.forms.get(val);
+            if (val && frm && !frm.validate())
+                return false;
+        }
+        return true;
+    }
+
+    // Form_CustomValidate
+    fGOOD_GFadd.customValidate = function(fobj) { // DO NOT CHANGE THIS LINE!
+        // Your custom validation code here, return false if invalid.
+        return true;
+    }
+
+    // Use JavaScript validation or not
+    fGOOD_GFadd.validateRequired = <?= Config("CLIENT_VALIDATE") ? "true" : "false" ?>;
+
+    // Dynamic selection lists
+    loadjs.done("fGOOD_GFadd");
+});
+</script>
+<script>
+loadjs.ready("head", function () {
+    // Write your table-specific client script here, no need to add script tags.
+});
+</script>
+<?php $Page->showPageHeader(); ?>
+<?php
+$Page->showMessage();
+?>
+<form name="fGOOD_GFadd" id="fGOOD_GFadd" class="<?= $Page->FormClassName ?>" action="<?= CurrentPageUrl(false) ?>" method="post">
+<?php if (Config("CHECK_TOKEN")) { ?>
+<input type="hidden" name="<?= $TokenNameKey ?>" value="<?= $TokenName ?>"><!-- CSRF token name -->
+<input type="hidden" name="<?= $TokenValueKey ?>" value="<?= $TokenValue ?>"><!-- CSRF token value -->
+<?php } ?>
+<input type="hidden" name="t" value="GOOD_GF">
+<input type="hidden" name="action" id="action" value="insert">
+<input type="hidden" name="modal" value="<?= (int)$Page->IsModal ?>">
+<input type="hidden" name="<?= $Page->OldKeyName ?>" value="<?= $Page->OldKey ?>">
+<?php if ($Page->getCurrentMasterTable() == "MUTATION_DOCS") { ?>
+<input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="MUTATION_DOCS">
+<input type="hidden" name="fk_ORDER_ID" value="<?= HtmlEncode($Page->ORDER_ID->getSessionValue()) ?>">
+<input type="hidden" name="fk_DOC_NO" value="<?= HtmlEncode($Page->DOC_NO->getSessionValue()) ?>">
+<?php } ?>
+<div class="ew-add-div"><!-- page* -->
+<?php if ($Page->BATCH_NO->Visible) { // BATCH_NO ?>
+    <div id="r_BATCH_NO" class="form-group row">
+        <label id="elh_GOOD_GF_BATCH_NO" for="x_BATCH_NO" class="<?= $Page->LeftColumnClass ?>"><?= $Page->BATCH_NO->caption() ?><?= $Page->BATCH_NO->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->BATCH_NO->cellAttributes() ?>>
+<span id="el_GOOD_GF_BATCH_NO">
+<input type="<?= $Page->BATCH_NO->getInputTextType() ?>" data-table="GOOD_GF" data-field="x_BATCH_NO" name="x_BATCH_NO" id="x_BATCH_NO" size="30" maxlength="75" placeholder="<?= HtmlEncode($Page->BATCH_NO->getPlaceHolder()) ?>" value="<?= $Page->BATCH_NO->EditValue ?>"<?= $Page->BATCH_NO->editAttributes() ?> aria-describedby="x_BATCH_NO_help">
+<?= $Page->BATCH_NO->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->BATCH_NO->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->BRAND_ID->Visible) { // BRAND_ID ?>
+    <div id="r_BRAND_ID" class="form-group row">
+        <label id="elh_GOOD_GF_BRAND_ID" for="x_BRAND_ID" class="<?= $Page->LeftColumnClass ?>"><?= $Page->BRAND_ID->caption() ?><?= $Page->BRAND_ID->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->BRAND_ID->cellAttributes() ?>>
+<span id="el_GOOD_GF_BRAND_ID">
+<input type="<?= $Page->BRAND_ID->getInputTextType() ?>" data-table="GOOD_GF" data-field="x_BRAND_ID" name="x_BRAND_ID" id="x_BRAND_ID" size="30" maxlength="50" placeholder="<?= HtmlEncode($Page->BRAND_ID->getPlaceHolder()) ?>" value="<?= $Page->BRAND_ID->EditValue ?>"<?= $Page->BRAND_ID->editAttributes() ?> aria-describedby="x_BRAND_ID_help">
+<?= $Page->BRAND_ID->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->BRAND_ID->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->ROOMS_ID->Visible) { // ROOMS_ID ?>
+    <div id="r_ROOMS_ID" class="form-group row">
+        <label id="elh_GOOD_GF_ROOMS_ID" for="x_ROOMS_ID" class="<?= $Page->LeftColumnClass ?>"><?= $Page->ROOMS_ID->caption() ?><?= $Page->ROOMS_ID->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->ROOMS_ID->cellAttributes() ?>>
+<span id="el_GOOD_GF_ROOMS_ID">
+<input type="<?= $Page->ROOMS_ID->getInputTextType() ?>" data-table="GOOD_GF" data-field="x_ROOMS_ID" name="x_ROOMS_ID" id="x_ROOMS_ID" size="30" maxlength="10" placeholder="<?= HtmlEncode($Page->ROOMS_ID->getPlaceHolder()) ?>" value="<?= $Page->ROOMS_ID->EditValue ?>"<?= $Page->ROOMS_ID->editAttributes() ?> aria-describedby="x_ROOMS_ID_help">
+<?= $Page->ROOMS_ID->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->ROOMS_ID->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->EXPIRY_DATE->Visible) { // EXPIRY_DATE ?>
+    <div id="r_EXPIRY_DATE" class="form-group row">
+        <label id="elh_GOOD_GF_EXPIRY_DATE" for="x_EXPIRY_DATE" class="<?= $Page->LeftColumnClass ?>"><?= $Page->EXPIRY_DATE->caption() ?><?= $Page->EXPIRY_DATE->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->EXPIRY_DATE->cellAttributes() ?>>
+<span id="el_GOOD_GF_EXPIRY_DATE">
+<input type="<?= $Page->EXPIRY_DATE->getInputTextType() ?>" data-table="GOOD_GF" data-field="x_EXPIRY_DATE" name="x_EXPIRY_DATE" id="x_EXPIRY_DATE" placeholder="<?= HtmlEncode($Page->EXPIRY_DATE->getPlaceHolder()) ?>" value="<?= $Page->EXPIRY_DATE->EditValue ?>"<?= $Page->EXPIRY_DATE->editAttributes() ?> aria-describedby="x_EXPIRY_DATE_help">
+<?= $Page->EXPIRY_DATE->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->EXPIRY_DATE->getErrorMessage() ?></div>
+<?php if (!$Page->EXPIRY_DATE->ReadOnly && !$Page->EXPIRY_DATE->Disabled && !isset($Page->EXPIRY_DATE->EditAttrs["readonly"]) && !isset($Page->EXPIRY_DATE->EditAttrs["disabled"])) { ?>
+<script>
+loadjs.ready(["fGOOD_GFadd", "datetimepicker"], function() {
+    ew.createDateTimePicker("fGOOD_GFadd", "x_EXPIRY_DATE", {"ignoreReadonly":true,"useCurrent":false,"format":0});
+});
+</script>
+<?php } ?>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->ISOUTLET->Visible) { // ISOUTLET ?>
+    <div id="r_ISOUTLET" class="form-group row">
+        <label id="elh_GOOD_GF_ISOUTLET" for="x_ISOUTLET" class="<?= $Page->LeftColumnClass ?>"><?= $Page->ISOUTLET->caption() ?><?= $Page->ISOUTLET->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->ISOUTLET->cellAttributes() ?>>
+<span id="el_GOOD_GF_ISOUTLET">
+<input type="<?= $Page->ISOUTLET->getInputTextType() ?>" data-table="GOOD_GF" data-field="x_ISOUTLET" name="x_ISOUTLET" id="x_ISOUTLET" size="30" maxlength="1" placeholder="<?= HtmlEncode($Page->ISOUTLET->getPlaceHolder()) ?>" value="<?= $Page->ISOUTLET->EditValue ?>"<?= $Page->ISOUTLET->editAttributes() ?> aria-describedby="x_ISOUTLET_help">
+<?= $Page->ISOUTLET->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->ISOUTLET->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->QUANTITY->Visible) { // QUANTITY ?>
+    <div id="r_QUANTITY" class="form-group row">
+        <label id="elh_GOOD_GF_QUANTITY" for="x_QUANTITY" class="<?= $Page->LeftColumnClass ?>"><?= $Page->QUANTITY->caption() ?><?= $Page->QUANTITY->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->QUANTITY->cellAttributes() ?>>
+<span id="el_GOOD_GF_QUANTITY">
+<input type="<?= $Page->QUANTITY->getInputTextType() ?>" data-table="GOOD_GF" data-field="x_QUANTITY" name="x_QUANTITY" id="x_QUANTITY" size="30" placeholder="<?= HtmlEncode($Page->QUANTITY->getPlaceHolder()) ?>" value="<?= $Page->QUANTITY->EditValue ?>"<?= $Page->QUANTITY->editAttributes() ?> aria-describedby="x_QUANTITY_help">
+<?= $Page->QUANTITY->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->QUANTITY->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->ALLOCATED_FROM->Visible) { // ALLOCATED_FROM ?>
+    <div id="r_ALLOCATED_FROM" class="form-group row">
+        <label id="elh_GOOD_GF_ALLOCATED_FROM" for="x_ALLOCATED_FROM" class="<?= $Page->LeftColumnClass ?>"><?= $Page->ALLOCATED_FROM->caption() ?><?= $Page->ALLOCATED_FROM->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->ALLOCATED_FROM->cellAttributes() ?>>
+<span id="el_GOOD_GF_ALLOCATED_FROM">
+<input type="<?= $Page->ALLOCATED_FROM->getInputTextType() ?>" data-table="GOOD_GF" data-field="x_ALLOCATED_FROM" name="x_ALLOCATED_FROM" id="x_ALLOCATED_FROM" size="30" maxlength="255" placeholder="<?= HtmlEncode($Page->ALLOCATED_FROM->getPlaceHolder()) ?>" value="<?= $Page->ALLOCATED_FROM->EditValue ?>"<?= $Page->ALLOCATED_FROM->editAttributes() ?> aria-describedby="x_ALLOCATED_FROM_help">
+<?= $Page->ALLOCATED_FROM->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->ALLOCATED_FROM->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->DIJUAL->Visible) { // DIJUAL ?>
+    <div id="r_DIJUAL" class="form-group row">
+        <label id="elh_GOOD_GF_DIJUAL" for="x_DIJUAL" class="<?= $Page->LeftColumnClass ?>"><?= $Page->DIJUAL->caption() ?><?= $Page->DIJUAL->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->DIJUAL->cellAttributes() ?>>
+<span id="el_GOOD_GF_DIJUAL">
+<input type="<?= $Page->DIJUAL->getInputTextType() ?>" data-table="GOOD_GF" data-field="x_DIJUAL" name="x_DIJUAL" id="x_DIJUAL" size="30" placeholder="<?= HtmlEncode($Page->DIJUAL->getPlaceHolder()) ?>" value="<?= $Page->DIJUAL->EditValue ?>"<?= $Page->DIJUAL->editAttributes() ?> aria-describedby="x_DIJUAL_help">
+<?= $Page->DIJUAL->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->DIJUAL->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+</div><!-- /page* -->
+    <?php if (strval($Page->DOC_NO->getSessionValue()) != "") { ?>
+    <input type="hidden" name="x_DOC_NO" id="x_DOC_NO" value="<?= HtmlEncode(strval($Page->DOC_NO->getSessionValue())) ?>">
+    <?php } ?>
+    <?php if (strval($Page->ORDER_ID->getSessionValue()) != "") { ?>
+    <input type="hidden" name="x_ORDER_ID" id="x_ORDER_ID" value="<?= HtmlEncode(strval($Page->ORDER_ID->getSessionValue())) ?>">
+    <?php } ?>
+<?php if (!$Page->IsModal) { ?>
+<div class="form-group row"><!-- buttons .form-group -->
+    <div class="<?= $Page->OffsetColumnClass ?>"><!-- buttons offset -->
+<button class="btn btn-primary ew-btn" name="btn-action" id="btn-action" type="submit"><?= $Language->phrase("AddBtn") ?></button>
+<button class="btn btn-default ew-btn" name="btn-cancel" id="btn-cancel" type="button" data-href="<?= HtmlEncode(GetUrl($Page->getReturnUrl())) ?>"><?= $Language->phrase("CancelBtn") ?></button>
+    </div><!-- /buttons offset -->
+</div><!-- /buttons .form-group -->
+<?php } ?>
+</form>
+<?php
+$Page->showPageFooter();
+echo GetDebugMessage();
+?>
+<script>
+// Field event handlers
+loadjs.ready("head", function() {
+    ew.addEventHandlers("GOOD_GF");
+});
+</script>
+<script>
+loadjs.ready("load", function () {
+    // Write your table-specific startup script here, no need to add script tags.
+});
+</script>
