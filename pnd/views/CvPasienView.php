@@ -123,6 +123,14 @@ $Page->showMessage();
     </tr>
 <?php } ?>
 </table>
+<?php
+    if (in_array("PASIEN_VISITATION", explode(",", $Page->getCurrentDetailTable())) && $PASIEN_VISITATION->DetailView) {
+?>
+<?php if ($Page->getCurrentDetailTable() != "") { ?>
+<h4 class="ew-detail-caption"><?= $Language->tablePhrase("PASIEN_VISITATION", "TblCaption") ?></h4>
+<?php } ?>
+<?php include_once "PasienVisitationGrid.php" ?>
+<?php } ?>
 </form>
 <?php
 $Page->showPageFooter();

@@ -1737,17 +1737,6 @@ class TreatmentAkomodasiView extends TreatmentAkomodasi
                     $validMaster = false;
                 }
             }
-            if ($masterTblVar == "PASIEN_VISITATION") {
-                $validMaster = true;
-                $masterTbl = Container("PASIEN_VISITATION");
-                if (($parm = Get("fk_VISIT_ID", Get("VISIT_ID"))) !== null) {
-                    $masterTbl->VISIT_ID->setQueryStringValue($parm);
-                    $this->VISIT_ID->setQueryStringValue($masterTbl->VISIT_ID->QueryStringValue);
-                    $this->VISIT_ID->setSessionValue($this->VISIT_ID->QueryStringValue);
-                } else {
-                    $validMaster = false;
-                }
-            }
             if ($masterTblVar == "TREATMENT_BILL") {
                 $validMaster = true;
                 $masterTbl = Container("TREATMENT_BILL");
@@ -1758,6 +1747,17 @@ class TreatmentAkomodasiView extends TreatmentAkomodasi
                 } else {
                     $validMaster = false;
                 }
+                if (($parm = Get("fk_VISIT_ID", Get("VISIT_ID"))) !== null) {
+                    $masterTbl->VISIT_ID->setQueryStringValue($parm);
+                    $this->VISIT_ID->setQueryStringValue($masterTbl->VISIT_ID->QueryStringValue);
+                    $this->VISIT_ID->setSessionValue($this->VISIT_ID->QueryStringValue);
+                } else {
+                    $validMaster = false;
+                }
+            }
+            if ($masterTblVar == "PASIEN_VISITATION") {
+                $validMaster = true;
+                $masterTbl = Container("PASIEN_VISITATION");
                 if (($parm = Get("fk_VISIT_ID", Get("VISIT_ID"))) !== null) {
                     $masterTbl->VISIT_ID->setQueryStringValue($parm);
                     $this->VISIT_ID->setQueryStringValue($masterTbl->VISIT_ID->QueryStringValue);
@@ -1784,17 +1784,6 @@ class TreatmentAkomodasiView extends TreatmentAkomodasi
                     $validMaster = false;
                 }
             }
-            if ($masterTblVar == "PASIEN_VISITATION") {
-                $validMaster = true;
-                $masterTbl = Container("PASIEN_VISITATION");
-                if (($parm = Post("fk_VISIT_ID", Post("VISIT_ID"))) !== null) {
-                    $masterTbl->VISIT_ID->setFormValue($parm);
-                    $this->VISIT_ID->setFormValue($masterTbl->VISIT_ID->FormValue);
-                    $this->VISIT_ID->setSessionValue($this->VISIT_ID->FormValue);
-                } else {
-                    $validMaster = false;
-                }
-            }
             if ($masterTblVar == "TREATMENT_BILL") {
                 $validMaster = true;
                 $masterTbl = Container("TREATMENT_BILL");
@@ -1805,6 +1794,17 @@ class TreatmentAkomodasiView extends TreatmentAkomodasi
                 } else {
                     $validMaster = false;
                 }
+                if (($parm = Post("fk_VISIT_ID", Post("VISIT_ID"))) !== null) {
+                    $masterTbl->VISIT_ID->setFormValue($parm);
+                    $this->VISIT_ID->setFormValue($masterTbl->VISIT_ID->FormValue);
+                    $this->VISIT_ID->setSessionValue($this->VISIT_ID->FormValue);
+                } else {
+                    $validMaster = false;
+                }
+            }
+            if ($masterTblVar == "PASIEN_VISITATION") {
+                $validMaster = true;
+                $masterTbl = Container("PASIEN_VISITATION");
                 if (($parm = Post("fk_VISIT_ID", Post("VISIT_ID"))) !== null) {
                     $masterTbl->VISIT_ID->setFormValue($parm);
                     $this->VISIT_ID->setFormValue($masterTbl->VISIT_ID->FormValue);
@@ -1831,15 +1831,15 @@ class TreatmentAkomodasiView extends TreatmentAkomodasi
                     $this->VISIT_ID->setSessionValue("");
                 }
             }
-            if ($masterTblVar != "PASIEN_VISITATION") {
-                if ($this->VISIT_ID->CurrentValue == "") {
-                    $this->VISIT_ID->setSessionValue("");
-                }
-            }
             if ($masterTblVar != "TREATMENT_BILL") {
                 if ($this->BILL_ID->CurrentValue == "") {
                     $this->BILL_ID->setSessionValue("");
                 }
+                if ($this->VISIT_ID->CurrentValue == "") {
+                    $this->VISIT_ID->setSessionValue("");
+                }
+            }
+            if ($masterTblVar != "PASIEN_VISITATION") {
                 if ($this->VISIT_ID->CurrentValue == "") {
                     $this->VISIT_ID->setSessionValue("");
                 }

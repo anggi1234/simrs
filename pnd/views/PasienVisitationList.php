@@ -107,6 +107,15 @@ loadjs.ready("head", function () {
 <div class="clearfix"></div>
 </div>
 <?php } ?>
+<?php if (!$Page->isExport() || Config("EXPORT_MASTER_RECORD") && $Page->isExport("print")) { ?>
+<?php
+if ($Page->DbMasterFilter != "" && $Page->getCurrentMasterTable() == "CV_PASIEN") {
+    if ($Page->MasterRecordExists) {
+        include_once "views/CvPasienMaster.php";
+    }
+}
+?>
+<?php } ?>
 <?php
 $Page->renderOtherOptions();
 ?>
@@ -250,6 +259,10 @@ $Page->showMessage();
 <input type="hidden" name="<?= $TokenValueKey ?>" value="<?= $TokenValue ?>"><!-- CSRF token value -->
 <?php } ?>
 <input type="hidden" name="t" value="PASIEN_VISITATION">
+<?php if ($Page->getCurrentMasterTable() == "CV_PASIEN" && $Page->CurrentAction) { ?>
+<input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="CV_PASIEN">
+<input type="hidden" name="fk_NO_REGISTRATION" value="<?= HtmlEncode($Page->NO_REGISTRATION->getSessionValue()) ?>">
+<?php } ?>
 <div id="gmp_PASIEN_VISITATION" class="<?= ResponsiveTableClass() ?>card-body ew-grid-middle-panel">
 <?php if ($Page->TotalRecords > 0 || $Page->isGridEdit()) { ?>
 <table id="tbl_PASIEN_VISITATIONlist" class="table ew-table"><!-- .ew-table -->

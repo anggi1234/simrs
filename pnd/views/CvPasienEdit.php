@@ -330,6 +330,14 @@ loadjs.ready(["fCV_PASIENedit", "datetimepicker"], function() {
 <?php } ?>
 </div><!-- /page* -->
     <input type="hidden" data-table="CV_PASIEN" data-field="x_ID" data-hidden="1" name="x_ID" id="x_ID" value="<?= HtmlEncode($Page->ID->CurrentValue) ?>">
+<?php
+    if (in_array("PASIEN_VISITATION", explode(",", $Page->getCurrentDetailTable())) && $PASIEN_VISITATION->DetailEdit) {
+?>
+<?php if ($Page->getCurrentDetailTable() != "") { ?>
+<h4 class="ew-detail-caption"><?= $Language->tablePhrase("PASIEN_VISITATION", "TblCaption") ?></h4>
+<?php } ?>
+<?php include_once "PasienVisitationGrid.php" ?>
+<?php } ?>
 <?php if (!$Page->IsModal) { ?>
 <div class="form-group row"><!-- buttons .form-group -->
     <div class="<?= $Page->OffsetColumnClass ?>"><!-- buttons offset -->

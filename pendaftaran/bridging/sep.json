@@ -1,0 +1,34 @@
+{
+    "metaData": {
+       "code": "200",
+       "message": "Sukses"
+    },
+    "response": {
+       "sep": {
+          "catatan": "test",
+          "diagnosa": "A00.1 - Cholera due to Vibrio cholerae 01, biovar eltor",
+          "jnsPelayanan": "R.Inap",
+          "kelasRawat": "1",
+          "noSep": "0301R0011117V000008",
+          "penjamin": "-",
+          "peserta": {
+             "asuransi": "-",
+             "hakKelas": "Kelas 1",
+             "jnsPeserta": "PNS PUSAT",
+             "kelamin": "Laki-Laki",
+             "nama": "ZIYADUL",
+             "noKartu": "0001112230666",
+             "noMr": "123456",
+             "tglLahir": "2008-02-05"
+          },
+          "informasi:": {
+             "Dinsos":null,
+             "prolanisPRB":null,
+             "noSKTM":null
+          },
+          "poli": "-",
+          "poliEksekutif": "-",
+          "tglSep": "2017-10-12"
+       }
+    }
+ }

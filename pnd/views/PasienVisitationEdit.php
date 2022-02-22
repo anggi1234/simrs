@@ -142,6 +142,10 @@ $Page->showMessage();
 <input type="hidden" name="action" id="action" value="update">
 <input type="hidden" name="modal" value="<?= (int)$Page->IsModal ?>">
 <input type="hidden" name="<?= $Page->OldKeyName ?>" value="<?= $Page->OldKey ?>">
+<?php if ($Page->getCurrentMasterTable() == "CV_PASIEN") { ?>
+<input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="CV_PASIEN">
+<input type="hidden" name="fk_NO_REGISTRATION" value="<?= HtmlEncode($Page->NO_REGISTRATION->getSessionValue()) ?>">
+<?php } ?>
 <div class="ew-edit-div"><!-- page* -->
 <?php if ($Page->SEP->Visible) { // SEP ?>
     <div id="r_SEP" class="form-group row">

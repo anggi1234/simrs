@@ -19,13 +19,13 @@ echo $topMenu->toScript();
 // Sidebar menu
 $sideMenu = new Menu("menu", true, false);
 $sideMenu->addMenuItem(6281, "mi_Dashboard2", $MenuLanguage->MenuPhrase("6281", "MenuText"), $MenuRelativePath . "Dashboard2", -1, "", AllowListMenu('{47BE3157-BFBF-4D1E-9194-44E31DF04D66}Dashboard'), false, false, "", "", false);
-$sideMenu->addMenuItem(6800, "mci_Antrian", $MenuLanguage->MenuPhrase("6800", "MenuText"), "", -1, "", true, false, true, "", "", false);
+$sideMenu->addMenuItem(6800, "mci_Antrian", $MenuLanguage->MenuPhrase("6800", "MenuText"), "", -1, "", IsLoggedIn(), false, true, "", "", false);
 $sideMenu->addMenuItem(24, "mi_ANTRIAN_PENDAFTARAN", $MenuLanguage->MenuPhrase("24", "MenuText"), $MenuRelativePath . "AntrianPendaftaranList", 6800, "", AllowListMenu('{47BE3157-BFBF-4D1E-9194-44E31DF04D66}ANTRIAN_PENDAFTARAN'), false, false, "", "", false);
 $sideMenu->addMenuItem(6288, "mi_ANTRIAN_PENDAFTARAN_DISABILITAS", $MenuLanguage->MenuPhrase("6288", "MenuText"), $MenuRelativePath . "AntrianPendaftaranDisabilitasList", 6800, "", AllowListMenu('{47BE3157-BFBF-4D1E-9194-44E31DF04D66}ANTRIAN_PENDAFTARAN_DISABILITAS'), false, false, "", "", false);
 $sideMenu->addMenuItem(25, "mi_ANTRIAN_POLI", $MenuLanguage->MenuPhrase("25", "MenuText"), $MenuRelativePath . "AntrianPoliList", 6800, "", AllowListMenu('{47BE3157-BFBF-4D1E-9194-44E31DF04D66}ANTRIAN_POLI'), false, false, "", "", false);
 $sideMenu->addMenuItem(467, "mci_Pendaftaran", $MenuLanguage->MenuPhrase("467", "MenuText"), "", -1, "", IsLoggedIn(), false, true, "", "", false);
 $sideMenu->addMenuItem(471, "mi_CV_PASIEN", $MenuLanguage->MenuPhrase("471", "MenuText"), $MenuRelativePath . "CvPasienList?cmd=resetall", 467, "", AllowListMenu('{47BE3157-BFBF-4D1E-9194-44E31DF04D66}CV_PASIEN'), false, false, "", "", false);
-$sideMenu->addMenuItem(321, "mi_PASIEN_VISITATION", $MenuLanguage->MenuPhrase("321", "MenuText"), $MenuRelativePath . "PasienVisitationList", 467, "", AllowListMenu('{47BE3157-BFBF-4D1E-9194-44E31DF04D66}PASIEN_VISITATION'), false, false, "", "", false);
+$sideMenu->addMenuItem(321, "mi_PASIEN_VISITATION", $MenuLanguage->MenuPhrase("321", "MenuText"), $MenuRelativePath . "PasienVisitationList?cmd=resetall", 467, "", AllowListMenu('{47BE3157-BFBF-4D1E-9194-44E31DF04D66}PASIEN_VISITATION'), false, false, "", "", false);
 $sideMenu->addMenuItem(6269, "mi_v_riwayat_sep", $MenuLanguage->MenuPhrase("6269", "MenuText"), $MenuRelativePath . "VRiwayatSepList", 467, "", AllowListMenu('{47BE3157-BFBF-4D1E-9194-44E31DF04D66}v_riwayat_sep'), false, false, "", "", false);
 $sideMenu->addMenuItem(312, "mi_PASIEN", $MenuLanguage->MenuPhrase("312", "MenuText"), $MenuRelativePath . "PasienList", 467, "", AllowListMenu('{47BE3157-BFBF-4D1E-9194-44E31DF04D66}PASIEN'), false, false, "", "", false);
 $sideMenu->addMenuItem(2837, "mci_Laporan", $MenuLanguage->MenuPhrase("2837", "MenuText"), "", 467, "", IsLoggedIn(), false, true, "", "", false);

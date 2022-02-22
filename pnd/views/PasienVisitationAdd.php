@@ -145,11 +145,22 @@ $Page->showMessage();
 <input type="hidden" name="action" id="action" value="insert">
 <input type="hidden" name="modal" value="<?= (int)$Page->IsModal ?>">
 <input type="hidden" name="<?= $Page->OldKeyName ?>" value="<?= $Page->OldKey ?>">
+<?php if ($Page->getCurrentMasterTable() == "CV_PASIEN") { ?>
+<input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="CV_PASIEN">
+<input type="hidden" name="fk_NO_REGISTRATION" value="<?= HtmlEncode($Page->NO_REGISTRATION->getSessionValue()) ?>">
+<?php } ?>
 <div class="ew-add-div"><!-- page* -->
 <?php if ($Page->NO_REGISTRATION->Visible) { // NO_REGISTRATION ?>
     <div id="r_NO_REGISTRATION" class="form-group row">
         <label id="elh_PASIEN_VISITATION_NO_REGISTRATION" for="x_NO_REGISTRATION" class="<?= $Page->LeftColumnClass ?>"><?= $Page->NO_REGISTRATION->caption() ?><?= $Page->NO_REGISTRATION->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
         <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->NO_REGISTRATION->cellAttributes() ?>>
+<?php if ($Page->NO_REGISTRATION->getSessionValue() != "") { ?>
+<span id="el_PASIEN_VISITATION_NO_REGISTRATION">
+<span<?= $Page->NO_REGISTRATION->viewAttributes() ?>>
+<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Page->NO_REGISTRATION->getDisplayValue($Page->NO_REGISTRATION->ViewValue))) ?>"></span>
+</span>
+<input type="hidden" id="x_NO_REGISTRATION" name="x_NO_REGISTRATION" value="<?= HtmlEncode($Page->NO_REGISTRATION->CurrentValue) ?>" data-hidden="1">
+<?php } else { ?>
 <span id="el_PASIEN_VISITATION_NO_REGISTRATION">
 <?php $Page->NO_REGISTRATION->EditAttrs->prepend("onchange", "ew.autoFill(this);"); ?>
 <div class="input-group ew-lookup-list" aria-describedby="x_NO_REGISTRATION_help">
@@ -163,6 +174,7 @@ $Page->showMessage();
 <?= $Page->NO_REGISTRATION->Lookup->getParamTag($Page, "p_x_NO_REGISTRATION") ?>
 <input type="hidden" is="selection-list" data-table="PASIEN_VISITATION" data-field="x_NO_REGISTRATION" data-page="1" data-type="text" data-multiple="0" data-lookup="1" data-value-separator="<?= $Page->NO_REGISTRATION->displayValueSeparatorAttribute() ?>" name="x_NO_REGISTRATION" id="x_NO_REGISTRATION" value="<?= $Page->NO_REGISTRATION->CurrentValue ?>"<?= $Page->NO_REGISTRATION->editAttributes() ?>>
 </span>
+<?php } ?>
 </div></div>
     </div>
 <?php } ?>

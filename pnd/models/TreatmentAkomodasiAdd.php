@@ -2257,24 +2257,6 @@ class TreatmentAkomodasiAdd extends TreatmentAkomodasi
             $this->setFailureMessage($relatedRecordMsg);
             return false;
         }
-
-        // Check referential integrity for master table 'TREATMENT_AKOMODASI'
-        $validMasterRecord = true;
-        $masterFilter = $this->sqlMasterFilter_PASIEN_VISITATION();
-        if ($this->VISIT_ID->getSessionValue() != "") {
-        $masterFilter = str_replace("@VISIT_ID@", AdjustSql($this->VISIT_ID->getSessionValue(), "DB"), $masterFilter);
-        } else {
-            $validMasterRecord = false;
-        }
-        if ($validMasterRecord) {
-            $rsmaster = Container("PASIEN_VISITATION")->loadRs($masterFilter)->fetch();
-            $validMasterRecord = $rsmaster !== false;
-        }
-        if (!$validMasterRecord) {
-            $relatedRecordMsg = str_replace("%t", "PASIEN_VISITATION", $Language->phrase("RelatedRecordRequired"));
-            $this->setFailureMessage($relatedRecordMsg);
-            return false;
-        }
         $conn = $this->getConnection();
 
         // Load db values from rsold
@@ -2386,17 +2368,6 @@ class TreatmentAkomodasiAdd extends TreatmentAkomodasi
                     $validMaster = false;
                 }
             }
-            if ($masterTblVar == "PASIEN_VISITATION") {
-                $validMaster = true;
-                $masterTbl = Container("PASIEN_VISITATION");
-                if (($parm = Get("fk_VISIT_ID", Get("VISIT_ID"))) !== null) {
-                    $masterTbl->VISIT_ID->setQueryStringValue($parm);
-                    $this->VISIT_ID->setQueryStringValue($masterTbl->VISIT_ID->QueryStringValue);
-                    $this->VISIT_ID->setSessionValue($this->VISIT_ID->QueryStringValue);
-                } else {
-                    $validMaster = false;
-                }
-            }
             if ($masterTblVar == "TREATMENT_BILL") {
                 $validMaster = true;
                 $masterTbl = Container("TREATMENT_BILL");
@@ -2407,6 +2378,17 @@ class TreatmentAkomodasiAdd extends TreatmentAkomodasi
                 } else {
                     $validMaster = false;
                 }
+                if (($parm = Get("fk_VISIT_ID", Get("VISIT_ID"))) !== null) {
+                    $masterTbl->VISIT_ID->setQueryStringValue($parm);
+                    $this->VISIT_ID->setQueryStringValue($masterTbl->VISIT_ID->QueryStringValue);
+                    $this->VISIT_ID->setSessionValue($this->VISIT_ID->QueryStringValue);
+                } else {
+                    $validMaster = false;
+                }
+            }
+            if ($masterTblVar == "PASIEN_VISITATION") {
+                $validMaster = true;
+                $masterTbl = Container("PASIEN_VISITATION");
                 if (($parm = Get("fk_VISIT_ID", Get("VISIT_ID"))) !== null) {
                     $masterTbl->VISIT_ID->setQueryStringValue($parm);
                     $this->VISIT_ID->setQueryStringValue($masterTbl->VISIT_ID->QueryStringValue);
@@ -2433,17 +2415,6 @@ class TreatmentAkomodasiAdd extends TreatmentAkomodasi
                     $validMaster = false;
                 }
             }
-            if ($masterTblVar == "PASIEN_VISITATION") {
-                $validMaster = true;
-                $masterTbl = Container("PASIEN_VISITATION");
-                if (($parm = Post("fk_VISIT_ID", Post("VISIT_ID"))) !== null) {
-                    $masterTbl->VISIT_ID->setFormValue($parm);
-                    $this->VISIT_ID->setFormValue($masterTbl->VISIT_ID->FormValue);
-                    $this->VISIT_ID->setSessionValue($this->VISIT_ID->FormValue);
-                } else {
-                    $validMaster = false;
-                }
-            }
             if ($masterTblVar == "TREATMENT_BILL") {
                 $validMaster = true;
                 $masterTbl = Container("TREATMENT_BILL");
@@ -2454,6 +2425,17 @@ class TreatmentAkomodasiAdd extends TreatmentAkomodasi
                 } else {
                     $validMaster = false;
                 }
+                if (($parm = Post("fk_VISIT_ID", Post("VISIT_ID"))) !== null) {
+                    $masterTbl->VISIT_ID->setFormValue($parm);
+                    $this->VISIT_ID->setFormValue($masterTbl->VISIT_ID->FormValue);
+                    $this->VISIT_ID->setSessionValue($this->VISIT_ID->FormValue);
+                } else {
+                    $validMaster = false;
+                }
+            }
+            if ($masterTblVar == "PASIEN_VISITATION") {
+                $validMaster = true;
+                $masterTbl = Container("PASIEN_VISITATION");
                 if (($parm = Post("fk_VISIT_ID", Post("VISIT_ID"))) !== null) {
                     $masterTbl->VISIT_ID->setFormValue($parm);
                     $this->VISIT_ID->setFormValue($masterTbl->VISIT_ID->FormValue);
@@ -2479,15 +2461,15 @@ class TreatmentAkomodasiAdd extends TreatmentAkomodasi
                     $this->VISIT_ID->setSessionValue("");
                 }
             }
-            if ($masterTblVar != "PASIEN_VISITATION") {
-                if ($this->VISIT_ID->CurrentValue == "") {
-                    $this->VISIT_ID->setSessionValue("");
-                }
-            }
             if ($masterTblVar != "TREATMENT_BILL") {
                 if ($this->BILL_ID->CurrentValue == "") {
                     $this->BILL_ID->setSessionValue("");
                 }
+                if ($this->VISIT_ID->CurrentValue == "") {
+                    $this->VISIT_ID->setSessionValue("");
+                }
+            }
+            if ($masterTblVar != "PASIEN_VISITATION") {
                 if ($this->VISIT_ID->CurrentValue == "") {
                     $this->VISIT_ID->setSessionValue("");
                 }

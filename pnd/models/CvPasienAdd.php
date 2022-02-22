@@ -583,6 +583,9 @@ class CvPasienAdd extends CvPasien
             $this->loadFormValues(); // Load form values
         }
 
+        // Set up detail parameters
+        $this->setupDetailParms();
+
         // Validate form if post back
         if ($postBack) {
             if (!$this->validateForm()) {
@@ -607,6 +610,9 @@ class CvPasienAdd extends CvPasien
                     $this->terminate("CvPasienList"); // No matching record, return to list
                     return;
                 }
+
+                // Set up detail parameters
+                $this->setupDetailParms();
                 break;
             case "insert": // Add new record
                 $this->SendEmail = true; // Send email on add success
@@ -633,6 +639,9 @@ class CvPasienAdd extends CvPasien
                 } else {
                     $this->EventCancelled = true; // Event cancelled
                     $this->restoreFormValues(); // Add failed, restore form values
+
+                    // Set up detail parameters
+                    $this->setupDetailParms();
                 }
         }
 
@@ -1704,6 +1713,13 @@ class CvPasienAdd extends CvPasien
             }
         }
 
+        // Validate detail grid
+        $detailTblVar = explode(",", $this->getCurrentDetailTable());
+        $detailPage = Container("PasienVisitationGrid");
+        if (in_array("PASIEN_VISITATION", $detailTblVar) && $detailPage->DetailAdd) {
+            $detailPage->validateGridForm();
+        }
+
         // Return validate result
         $validateForm = !$this->hasInvalidFields();
 
@@ -1721,6 +1737,11 @@ class CvPasienAdd extends CvPasien
     {
         global $Language, $Security;
         $conn = $this->getConnection();
+
+        // Begin transaction
+        if ($this->getCurrentDetailTable() != "") {
+            $conn->beginTransaction();
+        }
 
         // Load db values from rsold
         $this->loadDbValues($rsold);
@@ -1773,6 +1794,30 @@ class CvPasienAdd extends CvPasien
                 $this->setFailureMessage($Language->phrase("InsertCancelled"));
             }
             $addRow = false;
+        }
+
+        // Add detail records
+        if ($addRow) {
+            $detailTblVar = explode(",", $this->getCurrentDetailTable());
+            $detailPage = Container("PasienVisitationGrid");
+            if (in_array("PASIEN_VISITATION", $detailTblVar) && $detailPage->DetailAdd) {
+                $detailPage->NO_REGISTRATION->setSessionValue($this->NO_REGISTRATION->CurrentValue); // Set master key
+                $Security->loadCurrentUserLevel($this->ProjectID . "PASIEN_VISITATION"); // Load user level of detail table
+                $addRow = $detailPage->gridInsert();
+                $Security->loadCurrentUserLevel($this->ProjectID . $this->TableName); // Restore user level of master table
+                if (!$addRow) {
+                $detailPage->NO_REGISTRATION->setSessionValue(""); // Clear master key if insert failed
+                }
+            }
+        }
+
+        // Commit/Rollback transaction
+        if ($this->getCurrentDetailTable() != "") {
+            if ($addRow) {
+                $conn->commit(); // Commit transaction
+            } else {
+                $conn->rollback(); // Rollback transaction
+            }
         }
         if ($addRow) {
             // Call Row Inserted event
@@ -1852,6 +1897,39 @@ class CvPasienAdd extends CvPasien
         }
         $this->DbMasterFilter = $this->getMasterFilter(); // Get master filter
         $this->DbDetailFilter = $this->getDetailFilter(); // Get detail filter
+    }
+
+    // Set up detail parms based on QueryString
+    protected function setupDetailParms()
+    {
+        // Get the keys for master table
+        $detailTblVar = Get(Config("TABLE_SHOW_DETAIL"));
+        if ($detailTblVar !== null) {
+            $this->setCurrentDetailTable($detailTblVar);
+        } else {
+            $detailTblVar = $this->getCurrentDetailTable();
+        }
+        if ($detailTblVar != "") {
+            $detailTblVar = explode(",", $detailTblVar);
+            if (in_array("PASIEN_VISITATION", $detailTblVar)) {
+                $detailPageObj = Container("PasienVisitationGrid");
+                if ($detailPageObj->DetailAdd) {
+                    if ($this->CopyRecord) {
+                        $detailPageObj->CurrentMode = "copy";
+                    } else {
+                        $detailPageObj->CurrentMode = "add";
+                    }
+                    $detailPageObj->CurrentAction = "gridadd";
+
+                    // Save current master table to detail table
+                    $detailPageObj->setCurrentMasterTable($this->TableVar);
+                    $detailPageObj->setStartRecordNumber(1);
+                    $detailPageObj->NO_REGISTRATION->IsDetailKey = true;
+                    $detailPageObj->NO_REGISTRATION->CurrentValue = $this->NO_REGISTRATION->CurrentValue;
+                    $detailPageObj->NO_REGISTRATION->setSessionValue($detailPageObj->NO_REGISTRATION->CurrentValue);
+                }
+            }
+        }
     }
 
     // Set up Breadcrumb

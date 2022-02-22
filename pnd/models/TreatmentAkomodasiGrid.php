@@ -696,13 +696,13 @@ class TreatmentAkomodasiGrid extends TreatmentAkomodasi
         }
 
         // Load master record
-        if ($this->CurrentMode != "add" && $this->getMasterFilter() != "" && $this->getCurrentMasterTable() == "PASIEN_VISITATION") {
-            $masterTbl = Container("PASIEN_VISITATION");
+        if ($this->CurrentMode != "add" && $this->getMasterFilter() != "" && $this->getCurrentMasterTable() == "TREATMENT_BILL") {
+            $masterTbl = Container("TREATMENT_BILL");
             $rsmaster = $masterTbl->loadRs($this->DbMasterFilter)->fetch(\PDO::FETCH_ASSOC);
             $this->MasterRecordExists = $rsmaster !== false;
             if (!$this->MasterRecordExists) {
                 $this->setFailureMessage($Language->phrase("NoRecord")); // Set no record found
-                $this->terminate("PasienVisitationList"); // Return to master page
+                $this->terminate("TreatmentBillList"); // Return to master page
                 return;
             } else {
                 $masterTbl->loadListRowValues($rsmaster);
@@ -712,13 +712,13 @@ class TreatmentAkomodasiGrid extends TreatmentAkomodasi
         }
 
         // Load master record
-        if ($this->CurrentMode != "add" && $this->getMasterFilter() != "" && $this->getCurrentMasterTable() == "TREATMENT_BILL") {
-            $masterTbl = Container("TREATMENT_BILL");
+        if ($this->CurrentMode != "add" && $this->getMasterFilter() != "" && $this->getCurrentMasterTable() == "PASIEN_VISITATION") {
+            $masterTbl = Container("PASIEN_VISITATION");
             $rsmaster = $masterTbl->loadRs($this->DbMasterFilter)->fetch(\PDO::FETCH_ASSOC);
             $this->MasterRecordExists = $rsmaster !== false;
             if (!$this->MasterRecordExists) {
                 $this->setFailureMessage($Language->phrase("NoRecord")); // Set no record found
-                $this->terminate("TreatmentBillList"); // Return to master page
+                $this->terminate("PasienVisitationList"); // Return to master page
                 return;
             } else {
                 $masterTbl->loadListRowValues($rsmaster);
@@ -1214,8 +1214,8 @@ class TreatmentAkomodasiGrid extends TreatmentAkomodasi
                 $this->DbMasterFilter = "";
                 $this->DbDetailFilter = "";
                         $this->VISIT_ID->setSessionValue("");
-                        $this->VISIT_ID->setSessionValue("");
                         $this->BILL_ID->setSessionValue("");
+                        $this->VISIT_ID->setSessionValue("");
                         $this->VISIT_ID->setSessionValue("");
             }
 
@@ -3362,25 +3362,6 @@ class TreatmentAkomodasiGrid extends TreatmentAkomodasi
                 return false;
             }
 
-            // Check referential integrity for master table 'PASIEN_VISITATION'
-            $validMasterRecord = true;
-            $masterFilter = $this->sqlMasterFilter_PASIEN_VISITATION();
-            $keyValue = $rsnew['VISIT_ID'] ?? $rsold['VISIT_ID'];
-            if (strval($keyValue) != "") {
-                $masterFilter = str_replace("@VISIT_ID@", AdjustSql($keyValue), $masterFilter);
-            } else {
-                $validMasterRecord = false;
-            }
-            if ($validMasterRecord) {
-                $rsmaster = Container("PASIEN_VISITATION")->loadRs($masterFilter)->fetch();
-                $validMasterRecord = $rsmaster !== false;
-            }
-            if (!$validMasterRecord) {
-                $relatedRecordMsg = str_replace("%t", "PASIEN_VISITATION", $Language->phrase("RelatedRecordRequired"));
-                $this->setFailureMessage($relatedRecordMsg);
-                return false;
-            }
-
             // Call Row Updating event
             $updateRow = $this->rowUpdating($rsold, $rsnew);
             if ($updateRow) {
@@ -3434,11 +3415,11 @@ class TreatmentAkomodasiGrid extends TreatmentAkomodasi
         if ($this->getCurrentMasterTable() == "V_KASIR") {
             $this->VISIT_ID->CurrentValue = $this->VISIT_ID->getSessionValue();
         }
-        if ($this->getCurrentMasterTable() == "PASIEN_VISITATION") {
-            $this->VISIT_ID->CurrentValue = $this->VISIT_ID->getSessionValue();
-        }
         if ($this->getCurrentMasterTable() == "TREATMENT_BILL") {
             $this->BILL_ID->CurrentValue = $this->BILL_ID->getSessionValue();
+            $this->VISIT_ID->CurrentValue = $this->VISIT_ID->getSessionValue();
+        }
+        if ($this->getCurrentMasterTable() == "PASIEN_VISITATION") {
             $this->VISIT_ID->CurrentValue = $this->VISIT_ID->getSessionValue();
         }
 
@@ -3456,24 +3437,6 @@ class TreatmentAkomodasiGrid extends TreatmentAkomodasi
         }
         if (!$validMasterRecord) {
             $relatedRecordMsg = str_replace("%t", "V_KASIR", $Language->phrase("RelatedRecordRequired"));
-            $this->setFailureMessage($relatedRecordMsg);
-            return false;
-        }
-
-        // Check referential integrity for master table 'TREATMENT_AKOMODASI'
-        $validMasterRecord = true;
-        $masterFilter = $this->sqlMasterFilter_PASIEN_VISITATION();
-        if ($this->VISIT_ID->getSessionValue() != "") {
-        $masterFilter = str_replace("@VISIT_ID@", AdjustSql($this->VISIT_ID->getSessionValue(), "DB"), $masterFilter);
-        } else {
-            $validMasterRecord = false;
-        }
-        if ($validMasterRecord) {
-            $rsmaster = Container("PASIEN_VISITATION")->loadRs($masterFilter)->fetch();
-            $validMasterRecord = $rsmaster !== false;
-        }
-        if (!$validMasterRecord) {
-            $relatedRecordMsg = str_replace("%t", "PASIEN_VISITATION", $Language->phrase("RelatedRecordRequired"));
             $this->setFailureMessage($relatedRecordMsg);
             return false;
         }
@@ -3573,19 +3536,19 @@ class TreatmentAkomodasiGrid extends TreatmentAkomodasi
                 $this->EventCancelled = true;
             }
         }
-        if ($masterTblVar == "PASIEN_VISITATION") {
-            $masterTbl = Container("PASIEN_VISITATION");
-            $this->VISIT_ID->Visible = false;
-            if ($masterTbl->EventCancelled) {
-                $this->EventCancelled = true;
-            }
-        }
         if ($masterTblVar == "TREATMENT_BILL") {
             $masterTbl = Container("TREATMENT_BILL");
             $this->BILL_ID->Visible = false;
             if ($masterTbl->EventCancelled) {
                 $this->EventCancelled = true;
             }
+            $this->VISIT_ID->Visible = false;
+            if ($masterTbl->EventCancelled) {
+                $this->EventCancelled = true;
+            }
+        }
+        if ($masterTblVar == "PASIEN_VISITATION") {
+            $masterTbl = Container("PASIEN_VISITATION");
             $this->VISIT_ID->Visible = false;
             if ($masterTbl->EventCancelled) {
                 $this->EventCancelled = true;

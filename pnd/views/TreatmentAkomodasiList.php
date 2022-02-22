@@ -62,16 +62,16 @@ if ($Page->DbMasterFilter != "" && $Page->getCurrentMasterTable() == "V_KASIR") 
 }
 ?>
 <?php
-if ($Page->DbMasterFilter != "" && $Page->getCurrentMasterTable() == "PASIEN_VISITATION") {
+if ($Page->DbMasterFilter != "" && $Page->getCurrentMasterTable() == "TREATMENT_BILL") {
     if ($Page->MasterRecordExists) {
-        include_once "views/PasienVisitationMaster.php";
+        include_once "views/TreatmentBillMaster.php";
     }
 }
 ?>
 <?php
-if ($Page->DbMasterFilter != "" && $Page->getCurrentMasterTable() == "TREATMENT_BILL") {
+if ($Page->DbMasterFilter != "" && $Page->getCurrentMasterTable() == "PASIEN_VISITATION") {
     if ($Page->MasterRecordExists) {
-        include_once "views/TreatmentBillMaster.php";
+        include_once "views/PasienVisitationMaster.php";
     }
 }
 ?>
@@ -136,13 +136,13 @@ $Page->showMessage();
 <input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="V_KASIR">
 <input type="hidden" name="fk_VISIT_ID" value="<?= HtmlEncode($Page->VISIT_ID->getSessionValue()) ?>">
 <?php } ?>
-<?php if ($Page->getCurrentMasterTable() == "PASIEN_VISITATION" && $Page->CurrentAction) { ?>
-<input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="PASIEN_VISITATION">
-<input type="hidden" name="fk_VISIT_ID" value="<?= HtmlEncode($Page->VISIT_ID->getSessionValue()) ?>">
-<?php } ?>
 <?php if ($Page->getCurrentMasterTable() == "TREATMENT_BILL" && $Page->CurrentAction) { ?>
 <input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="TREATMENT_BILL">
 <input type="hidden" name="fk_BILL_ID" value="<?= HtmlEncode($Page->BILL_ID->getSessionValue()) ?>">
+<input type="hidden" name="fk_VISIT_ID" value="<?= HtmlEncode($Page->VISIT_ID->getSessionValue()) ?>">
+<?php } ?>
+<?php if ($Page->getCurrentMasterTable() == "PASIEN_VISITATION" && $Page->CurrentAction) { ?>
+<input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="PASIEN_VISITATION">
 <input type="hidden" name="fk_VISIT_ID" value="<?= HtmlEncode($Page->VISIT_ID->getSessionValue()) ?>">
 <?php } ?>
 <div id="gmp_TREATMENT_AKOMODASI" class="<?= ResponsiveTableClass() ?>card-body ew-grid-middle-panel">

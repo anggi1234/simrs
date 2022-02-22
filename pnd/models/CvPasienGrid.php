@@ -657,10 +657,6 @@ class CvPasienGrid extends CvPasien
         $this->DbDetailFilter = $this->getDetailFilter(); // Restore detail filter
         AddFilter($filter, $this->DbDetailFilter);
         AddFilter($filter, $this->SearchWhere);
-        if ($filter == "") {
-            $filter = "0=101";
-            $this->SearchWhere = $filter;
-        }
 
         // Load master record
         if ($this->CurrentMode != "add" && $this->getMasterFilter() != "" && $this->getCurrentMasterTable() == "PASIEN_VISITATION") {

@@ -834,13 +834,6 @@ class TreatmentAkomodasi extends DbTable
                 return "";
             }
         }
-        if ($this->getCurrentMasterTable() == "PASIEN_VISITATION") {
-            if ($this->VISIT_ID->getSessionValue() != "") {
-                $masterFilter .= "" . GetForeignKeySql("[VISIT_ID]", $this->VISIT_ID->getSessionValue(), DATATYPE_STRING, "DB");
-            } else {
-                return "";
-            }
-        }
         if ($this->getCurrentMasterTable() == "TREATMENT_BILL") {
             if ($this->BILL_ID->getSessionValue() != "") {
                 $masterFilter .= "" . GetForeignKeySql("[BILL_ID]", $this->BILL_ID->getSessionValue(), DATATYPE_STRING, "DB");
@@ -849,6 +842,13 @@ class TreatmentAkomodasi extends DbTable
             }
             if ($this->VISIT_ID->getSessionValue() != "") {
                 $masterFilter .= " AND " . GetForeignKeySql("[VISIT_ID]", $this->VISIT_ID->getSessionValue(), DATATYPE_STRING, "DB");
+            } else {
+                return "";
+            }
+        }
+        if ($this->getCurrentMasterTable() == "PASIEN_VISITATION") {
+            if ($this->VISIT_ID->getSessionValue() != "") {
+                $masterFilter .= "" . GetForeignKeySql("[VISIT_ID]", $this->VISIT_ID->getSessionValue(), DATATYPE_STRING, "DB");
             } else {
                 return "";
             }
@@ -868,13 +868,6 @@ class TreatmentAkomodasi extends DbTable
                 return "";
             }
         }
-        if ($this->getCurrentMasterTable() == "PASIEN_VISITATION") {
-            if ($this->VISIT_ID->getSessionValue() != "") {
-                $detailFilter .= "" . GetForeignKeySql("[VISIT_ID]", $this->VISIT_ID->getSessionValue(), DATATYPE_STRING, "DB");
-            } else {
-                return "";
-            }
-        }
         if ($this->getCurrentMasterTable() == "TREATMENT_BILL") {
             if ($this->BILL_ID->getSessionValue() != "") {
                 $detailFilter .= "" . GetForeignKeySql("[BILL_ID]", $this->BILL_ID->getSessionValue(), DATATYPE_STRING, "DB");
@@ -883,6 +876,13 @@ class TreatmentAkomodasi extends DbTable
             }
             if ($this->VISIT_ID->getSessionValue() != "") {
                 $detailFilter .= " AND " . GetForeignKeySql("[VISIT_ID]", $this->VISIT_ID->getSessionValue(), DATATYPE_STRING, "DB");
+            } else {
+                return "";
+            }
+        }
+        if ($this->getCurrentMasterTable() == "PASIEN_VISITATION") {
+            if ($this->VISIT_ID->getSessionValue() != "") {
+                $detailFilter .= "" . GetForeignKeySql("[VISIT_ID]", $this->VISIT_ID->getSessionValue(), DATATYPE_STRING, "DB");
             } else {
                 return "";
             }
@@ -902,17 +902,6 @@ class TreatmentAkomodasi extends DbTable
     }
 
     // Master filter
-    public function sqlMasterFilter_PASIEN_VISITATION()
-    {
-        return "[VISIT_ID]='@VISIT_ID@'";
-    }
-    // Detail filter
-    public function sqlDetailFilter_PASIEN_VISITATION()
-    {
-        return "[VISIT_ID]='@VISIT_ID@'";
-    }
-
-    // Master filter
     public function sqlMasterFilter_TREATMENT_BILL()
     {
         return "[BILL_ID]='@BILL_ID@' AND [VISIT_ID]='@VISIT_ID@'";
@@ -921,6 +910,17 @@ class TreatmentAkomodasi extends DbTable
     public function sqlDetailFilter_TREATMENT_BILL()
     {
         return "[BILL_ID]='@BILL_ID@' AND [VISIT_ID]='@VISIT_ID@'";
+    }
+
+    // Master filter
+    public function sqlMasterFilter_PASIEN_VISITATION()
+    {
+        return "[VISIT_ID]='@VISIT_ID@'";
+    }
+    // Detail filter
+    public function sqlDetailFilter_PASIEN_VISITATION()
+    {
+        return "[VISIT_ID]='@VISIT_ID@'";
     }
 
     // Table level SQL
@@ -1562,13 +1562,13 @@ class TreatmentAkomodasi extends DbTable
             $url .= (ContainsString($url, "?") ? "&" : "?") . Config("TABLE_SHOW_MASTER") . "=" . $this->getCurrentMasterTable();
             $url .= "&" . GetForeignKeyUrl("fk_VISIT_ID", $this->VISIT_ID->CurrentValue ?? $this->VISIT_ID->getSessionValue());
         }
-        if ($this->getCurrentMasterTable() == "PASIEN_VISITATION" && !ContainsString($url, Config("TABLE_SHOW_MASTER") . "=")) {
-            $url .= (ContainsString($url, "?") ? "&" : "?") . Config("TABLE_SHOW_MASTER") . "=" . $this->getCurrentMasterTable();
-            $url .= "&" . GetForeignKeyUrl("fk_VISIT_ID", $this->VISIT_ID->CurrentValue ?? $this->VISIT_ID->getSessionValue());
-        }
         if ($this->getCurrentMasterTable() == "TREATMENT_BILL" && !ContainsString($url, Config("TABLE_SHOW_MASTER") . "=")) {
             $url .= (ContainsString($url, "?") ? "&" : "?") . Config("TABLE_SHOW_MASTER") . "=" . $this->getCurrentMasterTable();
             $url .= "&" . GetForeignKeyUrl("fk_BILL_ID", $this->BILL_ID->CurrentValue ?? $this->BILL_ID->getSessionValue());
+            $url .= "&" . GetForeignKeyUrl("fk_VISIT_ID", $this->VISIT_ID->CurrentValue ?? $this->VISIT_ID->getSessionValue());
+        }
+        if ($this->getCurrentMasterTable() == "PASIEN_VISITATION" && !ContainsString($url, Config("TABLE_SHOW_MASTER") . "=")) {
+            $url .= (ContainsString($url, "?") ? "&" : "?") . Config("TABLE_SHOW_MASTER") . "=" . $this->getCurrentMasterTable();
             $url .= "&" . GetForeignKeyUrl("fk_VISIT_ID", $this->VISIT_ID->CurrentValue ?? $this->VISIT_ID->getSessionValue());
         }
         return $url;

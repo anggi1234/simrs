@@ -171,7 +171,7 @@ $CONFIG = [
 
     // General
     "UNFORMAT_YEAR" => 50, // Unformat year
-    "RANDOM_KEY" => '0wvx8pef7v1ccm7p', // Random key for encryption
+    "RANDOM_KEY" => 'H7uShbt1af8H5Cym', // Random key for encryption
     "ENCRYPTION_KEY" => '', // Encryption key for data protection
     "PROJECT_STYLESHEET_FILENAME" => "css/SIMRSSQLSERVERPENDAFTARAN.css", // Project stylesheet file name
     "PROJECT_CHARSET" => "utf-8", // Project charset

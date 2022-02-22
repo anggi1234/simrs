@@ -211,6 +211,14 @@ loadjs.ready(["fCV_PASIENadd", "datetimepicker"], function() {
     <?php if (strval($Page->NO_REGISTRATION->getSessionValue()) != "") { ?>
     <input type="hidden" name="x_NO_REGISTRATION" id="x_NO_REGISTRATION" value="<?= HtmlEncode(strval($Page->NO_REGISTRATION->getSessionValue())) ?>">
     <?php } ?>
+<?php
+    if (in_array("PASIEN_VISITATION", explode(",", $Page->getCurrentDetailTable())) && $PASIEN_VISITATION->DetailAdd) {
+?>
+<?php if ($Page->getCurrentDetailTable() != "") { ?>
+<h4 class="ew-detail-caption"><?= $Language->tablePhrase("PASIEN_VISITATION", "TblCaption") ?></h4>
+<?php } ?>
+<?php include_once "PasienVisitationGrid.php" ?>
+<?php } ?>
 <?php if (!$Page->IsModal) { ?>
 <div class="form-group row"><!-- buttons .form-group -->
     <div class="<?= $Page->OffsetColumnClass ?>"><!-- buttons offset -->

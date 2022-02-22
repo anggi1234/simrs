@@ -126,13 +126,13 @@ $Page->showMessage();
 <input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="V_KASIR">
 <input type="hidden" name="fk_VISIT_ID" value="<?= HtmlEncode($Page->VISIT_ID->getSessionValue()) ?>">
 <?php } ?>
-<?php if ($Page->getCurrentMasterTable() == "PASIEN_VISITATION") { ?>
-<input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="PASIEN_VISITATION">
-<input type="hidden" name="fk_VISIT_ID" value="<?= HtmlEncode($Page->VISIT_ID->getSessionValue()) ?>">
-<?php } ?>
 <?php if ($Page->getCurrentMasterTable() == "TREATMENT_BILL") { ?>
 <input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="TREATMENT_BILL">
 <input type="hidden" name="fk_BILL_ID" value="<?= HtmlEncode($Page->BILL_ID->getSessionValue()) ?>">
+<input type="hidden" name="fk_VISIT_ID" value="<?= HtmlEncode($Page->VISIT_ID->getSessionValue()) ?>">
+<?php } ?>
+<?php if ($Page->getCurrentMasterTable() == "PASIEN_VISITATION") { ?>
+<input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="PASIEN_VISITATION">
 <input type="hidden" name="fk_VISIT_ID" value="<?= HtmlEncode($Page->VISIT_ID->getSessionValue()) ?>">
 <?php } ?>
 <div class="ew-add-div"><!-- page* -->

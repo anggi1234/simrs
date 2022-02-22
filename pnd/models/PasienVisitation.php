@@ -1129,6 +1129,58 @@ class PasienVisitation extends DbTable
         }
     }
 
+    // Current master table name
+    public function getCurrentMasterTable()
+    {
+        return Session(PROJECT_NAME . "_" . $this->TableVar . "_" . Config("TABLE_MASTER_TABLE"));
+    }
+
+    public function setCurrentMasterTable($v)
+    {
+        $_SESSION[PROJECT_NAME . "_" . $this->TableVar . "_" . Config("TABLE_MASTER_TABLE")] = $v;
+    }
+
+    // Session master WHERE clause
+    public function getMasterFilter()
+    {
+        // Master filter
+        $masterFilter = "";
+        if ($this->getCurrentMasterTable() == "CV_PASIEN") {
+            if ($this->NO_REGISTRATION->getSessionValue() != "") {
+                $masterFilter .= "" . GetForeignKeySql("[NO_REGISTRATION]", $this->NO_REGISTRATION->getSessionValue(), DATATYPE_STRING, "DB");
+            } else {
+                return "";
+            }
+        }
+        return $masterFilter;
+    }
+
+    // Session detail WHERE clause
+    public function getDetailFilter()
+    {
+        // Detail filter
+        $detailFilter = "";
+        if ($this->getCurrentMasterTable() == "CV_PASIEN") {
+            if ($this->NO_REGISTRATION->getSessionValue() != "") {
+                $detailFilter .= "" . GetForeignKeySql("[NO_REGISTRATION]", $this->NO_REGISTRATION->getSessionValue(), DATATYPE_STRING, "DB");
+            } else {
+                return "";
+            }
+        }
+        return $detailFilter;
+    }
+
+    // Master filter
+    public function sqlMasterFilter_CV_PASIEN()
+    {
+        return "[NO_REGISTRATION]='@NO_REGISTRATION@'";
+    }
+    // Detail filter
+    public function sqlDetailFilter_CV_PASIEN()
+    {
+        return "[NO_REGISTRATION]='@NO_REGISTRATION@'";
+    }
+
     // Current detail table name
     public function getCurrentDetailTable()
     {
@@ -1490,33 +1542,6 @@ class PasienVisitation extends DbTable
     // Update
     public function update(&$rs, $where = "", $rsold = null, $curfilter = true)
     {
-        // Cascade Update detail table 'TREATMENT_AKOMODASI'
-        $cascadeUpdate = false;
-        $rscascade = [];
-        if ($rsold && (isset($rs['VISIT_ID']) && $rsold['VISIT_ID'] != $rs['VISIT_ID'])) { // Update detail field 'VISIT_ID'
-            $cascadeUpdate = true;
-            $rscascade['VISIT_ID'] = $rs['VISIT_ID'];
-        }
-        if ($cascadeUpdate) {
-            $rswrk = Container("TREATMENT_AKOMODASI")->loadRs("[VISIT_ID] = " . QuotedValue($rsold['VISIT_ID'], DATATYPE_STRING, 'DB'))->fetchAll(\PDO::FETCH_ASSOC);
-            foreach ($rswrk as $rsdtlold) {
-                $rskey = [];
-                $fldname = 'ID';
-                $rskey[$fldname] = $rsdtlold[$fldname];
-                $rsdtlnew = array_merge($rsdtlold, $rscascade);
-                // Call Row_Updating event
-                $success = Container("TREATMENT_AKOMODASI")->rowUpdating($rsdtlold, $rsdtlnew);
-                if ($success) {
-                    $success = Container("TREATMENT_AKOMODASI")->update($rscascade, $rskey, $rsdtlold);
-                }
-                if (!$success) {
-                    return false;
-                }
-                // Call Row_Updated event
-                Container("TREATMENT_AKOMODASI")->rowUpdated($rsdtlold, $rsdtlnew);
-            }
-        }
-
         // If no field is updated, execute may return 0. Treat as success
         $success = $this->updateSql($rs, $where, $curfilter)->execute();
         $success = ($success > 0) ? $success : true;
@@ -1552,30 +1577,6 @@ class PasienVisitation extends DbTable
     public function delete(&$rs, $where = "", $curfilter = false)
     {
         $success = true;
-
-        // Cascade delete detail table 'TREATMENT_AKOMODASI'
-        $dtlrows = Container("TREATMENT_AKOMODASI")->loadRs("[VISIT_ID] = " . QuotedValue($rs['VISIT_ID'], DATATYPE_STRING, "DB"))->fetchAll(\PDO::FETCH_ASSOC);
-        // Call Row Deleting event
-        foreach ($dtlrows as $dtlrow) {
-            $success = Container("TREATMENT_AKOMODASI")->rowDeleting($dtlrow);
-            if (!$success) {
-                break;
-            }
-        }
-        if ($success) {
-            foreach ($dtlrows as $dtlrow) {
-                $success = Container("TREATMENT_AKOMODASI")->delete($dtlrow); // Delete
-                if (!$success) {
-                    break;
-                }
-            }
-        }
-        // Call Row Deleted event
-        if ($success) {
-            foreach ($dtlrows as $dtlrow) {
-                Container("TREATMENT_AKOMODASI")->rowDeleted($dtlrow);
-            }
-        }
         if ($success) {
             $success = $this->deleteSql($rs, $where, $curfilter)->execute();
         }
@@ -1884,6 +1885,10 @@ class PasienVisitation extends DbTable
     // Add master url
     public function addMasterUrl($url)
     {
+        if ($this->getCurrentMasterTable() == "CV_PASIEN" && !ContainsString($url, Config("TABLE_SHOW_MASTER") . "=")) {
+            $url .= (ContainsString($url, "?") ? "&" : "?") . Config("TABLE_SHOW_MASTER") . "=" . $this->getCurrentMasterTable();
+            $url .= "&" . GetForeignKeyUrl("fk_NO_REGISTRATION", $this->NO_REGISTRATION->CurrentValue ?? $this->NO_REGISTRATION->getSessionValue());
+        }
         return $url;
     }
 

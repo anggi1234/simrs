@@ -645,6 +645,10 @@ class PasienVisitationAdd extends PasienVisitation
         // Load old record / default values
         $loaded = $this->loadOldRecord();
 
+        // Set up master/detail parameters
+        // NOTE: must be after loadOldRecord to prevent master key values overwritten
+        $this->setupMasterParms();
+
         // Load form values
         if ($postBack) {
             $this->loadFormValues(); // Load form values
@@ -2723,36 +2727,59 @@ class PasienVisitationAdd extends PasienVisitation
         } elseif ($this->RowType == ROWTYPE_ADD) {
             // NO_REGISTRATION
             $this->NO_REGISTRATION->EditCustomAttributes = "";
-            $curVal = trim(strval($this->NO_REGISTRATION->CurrentValue));
-            if ($curVal != "") {
-                $this->NO_REGISTRATION->ViewValue = $this->NO_REGISTRATION->lookupCacheOption($curVal);
+            if ($this->NO_REGISTRATION->getSessionValue() != "") {
+                $this->NO_REGISTRATION->CurrentValue = GetForeignKeyValue($this->NO_REGISTRATION->getSessionValue());
+                $curVal = trim(strval($this->NO_REGISTRATION->CurrentValue));
+                if ($curVal != "") {
+                    $this->NO_REGISTRATION->ViewValue = $this->NO_REGISTRATION->lookupCacheOption($curVal);
+                    if ($this->NO_REGISTRATION->ViewValue === null) { // Lookup from database
+                        $filterWrk = "[NO_REGISTRATION]" . SearchString("=", $curVal, DATATYPE_STRING, "");
+                        $sqlWrk = $this->NO_REGISTRATION->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                        $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                        $ari = count($rswrk);
+                        if ($ari > 0) { // Lookup values found
+                            $arwrk = $this->NO_REGISTRATION->Lookup->renderViewRow($rswrk[0]);
+                            $this->NO_REGISTRATION->ViewValue = $this->NO_REGISTRATION->displayValue($arwrk);
+                        } else {
+                            $this->NO_REGISTRATION->ViewValue = $this->NO_REGISTRATION->CurrentValue;
+                        }
+                    }
+                } else {
+                    $this->NO_REGISTRATION->ViewValue = null;
+                }
+                $this->NO_REGISTRATION->ViewCustomAttributes = "";
             } else {
-                $this->NO_REGISTRATION->ViewValue = $this->NO_REGISTRATION->Lookup !== null && is_array($this->NO_REGISTRATION->Lookup->Options) ? $curVal : null;
-            }
-            if ($this->NO_REGISTRATION->ViewValue !== null) { // Load from cache
-                $this->NO_REGISTRATION->EditValue = array_values($this->NO_REGISTRATION->Lookup->Options);
-                if ($this->NO_REGISTRATION->ViewValue == "") {
-                    $this->NO_REGISTRATION->ViewValue = $Language->phrase("PleaseSelect");
-                }
-            } else { // Lookup from database
-                if ($curVal == "") {
-                    $filterWrk = "0=1";
+                $curVal = trim(strval($this->NO_REGISTRATION->CurrentValue));
+                if ($curVal != "") {
+                    $this->NO_REGISTRATION->ViewValue = $this->NO_REGISTRATION->lookupCacheOption($curVal);
                 } else {
-                    $filterWrk = "[NO_REGISTRATION]" . SearchString("=", $this->NO_REGISTRATION->CurrentValue, DATATYPE_STRING, "");
+                    $this->NO_REGISTRATION->ViewValue = $this->NO_REGISTRATION->Lookup !== null && is_array($this->NO_REGISTRATION->Lookup->Options) ? $curVal : null;
                 }
-                $sqlWrk = $this->NO_REGISTRATION->Lookup->getSql(true, $filterWrk, '', $this, false, true);
-                $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
-                $ari = count($rswrk);
-                if ($ari > 0) { // Lookup values found
-                    $arwrk = $this->NO_REGISTRATION->Lookup->renderViewRow($rswrk[0]);
-                    $this->NO_REGISTRATION->ViewValue = $this->NO_REGISTRATION->displayValue($arwrk);
-                } else {
-                    $this->NO_REGISTRATION->ViewValue = $Language->phrase("PleaseSelect");
+                if ($this->NO_REGISTRATION->ViewValue !== null) { // Load from cache
+                    $this->NO_REGISTRATION->EditValue = array_values($this->NO_REGISTRATION->Lookup->Options);
+                    if ($this->NO_REGISTRATION->ViewValue == "") {
+                        $this->NO_REGISTRATION->ViewValue = $Language->phrase("PleaseSelect");
+                    }
+                } else { // Lookup from database
+                    if ($curVal == "") {
+                        $filterWrk = "0=1";
+                    } else {
+                        $filterWrk = "[NO_REGISTRATION]" . SearchString("=", $this->NO_REGISTRATION->CurrentValue, DATATYPE_STRING, "");
+                    }
+                    $sqlWrk = $this->NO_REGISTRATION->Lookup->getSql(true, $filterWrk, '', $this, false, true);
+                    $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                    $ari = count($rswrk);
+                    if ($ari > 0) { // Lookup values found
+                        $arwrk = $this->NO_REGISTRATION->Lookup->renderViewRow($rswrk[0]);
+                        $this->NO_REGISTRATION->ViewValue = $this->NO_REGISTRATION->displayValue($arwrk);
+                    } else {
+                        $this->NO_REGISTRATION->ViewValue = $Language->phrase("PleaseSelect");
+                    }
+                    $arwrk = $rswrk;
+                    $this->NO_REGISTRATION->EditValue = $arwrk;
                 }
-                $arwrk = $rswrk;
-                $this->NO_REGISTRATION->EditValue = $arwrk;
+                $this->NO_REGISTRATION->PlaceHolder = RemoveHtml($this->NO_REGISTRATION->caption());
             }
-            $this->NO_REGISTRATION->PlaceHolder = RemoveHtml($this->NO_REGISTRATION->caption());
 
             // DIANTAR_OLEH
             $this->DIANTAR_OLEH->EditAttrs["class"] = "form-control";
@@ -3600,6 +3627,69 @@ class PasienVisitationAdd extends PasienVisitation
             WriteJson(["success" => true, $this->TableVar => $row]);
         }
         return $addRow;
+    }
+
+    // Set up master/detail based on QueryString
+    protected function setupMasterParms()
+    {
+        $validMaster = false;
+        // Get the keys for master table
+        if (($master = Get(Config("TABLE_SHOW_MASTER"), Get(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                $validMaster = true;
+                $this->DbMasterFilter = "";
+                $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "CV_PASIEN") {
+                $validMaster = true;
+                $masterTbl = Container("CV_PASIEN");
+                if (($parm = Get("fk_NO_REGISTRATION", Get("NO_REGISTRATION"))) !== null) {
+                    $masterTbl->NO_REGISTRATION->setQueryStringValue($parm);
+                    $this->NO_REGISTRATION->setQueryStringValue($masterTbl->NO_REGISTRATION->QueryStringValue);
+                    $this->NO_REGISTRATION->setSessionValue($this->NO_REGISTRATION->QueryStringValue);
+                } else {
+                    $validMaster = false;
+                }
+            }
+        } elseif (($master = Post(Config("TABLE_SHOW_MASTER"), Post(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                    $validMaster = true;
+                    $this->DbMasterFilter = "";
+                    $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "CV_PASIEN") {
+                $validMaster = true;
+                $masterTbl = Container("CV_PASIEN");
+                if (($parm = Post("fk_NO_REGISTRATION", Post("NO_REGISTRATION"))) !== null) {
+                    $masterTbl->NO_REGISTRATION->setFormValue($parm);
+                    $this->NO_REGISTRATION->setFormValue($masterTbl->NO_REGISTRATION->FormValue);
+                    $this->NO_REGISTRATION->setSessionValue($this->NO_REGISTRATION->FormValue);
+                } else {
+                    $validMaster = false;
+                }
+            }
+        }
+        if ($validMaster) {
+            // Save current master table
+            $this->setCurrentMasterTable($masterTblVar);
+
+            // Reset start record counter (new master key)
+            if (!$this->isAddOrEdit()) {
+                $this->StartRecord = 1;
+                $this->setStartRecordNumber($this->StartRecord);
+            }
+
+            // Clear previous master key from Session
+            if ($masterTblVar != "CV_PASIEN") {
+                if ($this->NO_REGISTRATION->CurrentValue == "") {
+                    $this->NO_REGISTRATION->setSessionValue("");
+                }
+            }
+        }
+        $this->DbMasterFilter = $this->getMasterFilter(); // Get master filter
+        $this->DbDetailFilter = $this->getDetailFilter(); // Get detail filter
     }
 
     // Set up detail parms based on QueryString

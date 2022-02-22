@@ -616,6 +616,9 @@ class CvPasienEdit extends CvPasien
         // Process form if post back
         if ($postBack) {
             $this->loadFormValues(); // Get form values
+
+            // Set up detail parameters
+            $this->setupDetailParms();
         }
 
         // Validate form if post back
@@ -642,6 +645,9 @@ class CvPasienEdit extends CvPasien
                     $this->terminate("CvPasienList"); // No matching record, return to list
                     return;
                 }
+
+                // Set up detail parameters
+                $this->setupDetailParms();
                 break;
             case "update": // Update
                 $returnUrl = $this->GetViewUrl();
@@ -669,6 +675,9 @@ class CvPasienEdit extends CvPasien
                 } else {
                     $this->EventCancelled = true; // Event cancelled
                     $this->restoreFormValues(); // Restore form values if update failed
+
+                    // Set up detail parameters
+                    $this->setupDetailParms();
                 }
         }
 
@@ -1843,6 +1852,13 @@ class CvPasienEdit extends CvPasien
             $this->REGISTRATION_DATE->addErrorMessage($this->REGISTRATION_DATE->getErrorMessage(false));
         }
 
+        // Validate detail grid
+        $detailTblVar = explode(",", $this->getCurrentDetailTable());
+        $detailPage = Container("PasienVisitationGrid");
+        if (in_array("PASIEN_VISITATION", $detailTblVar) && $detailPage->DetailEdit) {
+            $detailPage->validateGridForm();
+        }
+
         // Return validate result
         $validateForm = !$this->hasInvalidFields();
 
@@ -1870,6 +1886,11 @@ class CvPasienEdit extends CvPasien
             $this->setFailureMessage($Language->phrase("NoRecord")); // Set no record message
             $editRow = false; // Update Failed
         } else {
+            // Begin transaction
+            if ($this->getCurrentDetailTable() != "") {
+                $conn->beginTransaction();
+            }
+
             // Save old values
             $this->loadDbValues($rsold);
             $rsnew = [];
@@ -1917,6 +1938,26 @@ class CvPasienEdit extends CvPasien
                     $editRow = true; // No field to update
                 }
                 if ($editRow) {
+                }
+
+                // Update detail records
+                $detailTblVar = explode(",", $this->getCurrentDetailTable());
+                if ($editRow) {
+                    $detailPage = Container("PasienVisitationGrid");
+                    if (in_array("PASIEN_VISITATION", $detailTblVar) && $detailPage->DetailEdit) {
+                        $Security->loadCurrentUserLevel($this->ProjectID . "PASIEN_VISITATION"); // Load user level of detail table
+                        $editRow = $detailPage->gridUpdate();
+                        $Security->loadCurrentUserLevel($this->ProjectID . $this->TableName); // Restore user level of master table
+                    }
+                }
+
+                // Commit/Rollback transaction
+                if ($this->getCurrentDetailTable() != "") {
+                    if ($editRow) {
+                        $conn->commit(); // Commit transaction
+                    } else {
+                        $conn->rollback(); // Rollback transaction
+                    }
                 }
             } else {
                 if ($this->getSuccessMessage() != "" || $this->getFailureMessage() != "") {
@@ -2010,6 +2051,35 @@ class CvPasienEdit extends CvPasien
         }
         $this->DbMasterFilter = $this->getMasterFilter(); // Get master filter
         $this->DbDetailFilter = $this->getDetailFilter(); // Get detail filter
+    }
+
+    // Set up detail parms based on QueryString
+    protected function setupDetailParms()
+    {
+        // Get the keys for master table
+        $detailTblVar = Get(Config("TABLE_SHOW_DETAIL"));
+        if ($detailTblVar !== null) {
+            $this->setCurrentDetailTable($detailTblVar);
+        } else {
+            $detailTblVar = $this->getCurrentDetailTable();
+        }
+        if ($detailTblVar != "") {
+            $detailTblVar = explode(",", $detailTblVar);
+            if (in_array("PASIEN_VISITATION", $detailTblVar)) {
+                $detailPageObj = Container("PasienVisitationGrid");
+                if ($detailPageObj->DetailEdit) {
+                    $detailPageObj->CurrentMode = "edit";
+                    $detailPageObj->CurrentAction = "gridedit";
+
+                    // Save current master table to detail table
+                    $detailPageObj->setCurrentMasterTable($this->TableVar);
+                    $detailPageObj->setStartRecordNumber(1);
+                    $detailPageObj->NO_REGISTRATION->IsDetailKey = true;
+                    $detailPageObj->NO_REGISTRATION->CurrentValue = $this->NO_REGISTRATION->CurrentValue;
+                    $detailPageObj->NO_REGISTRATION->setSessionValue($detailPageObj->NO_REGISTRATION->CurrentValue);
+                }
+            }
+        }
     }
 
     // Set up Breadcrumb

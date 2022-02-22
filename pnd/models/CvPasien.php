@@ -634,6 +634,32 @@ class CvPasien extends DbTable
         return "[NO_REGISTRATION]='@NO_REGISTRATION@'";
     }
 
+    // Current detail table name
+    public function getCurrentDetailTable()
+    {
+        return Session(PROJECT_NAME . "_" . $this->TableVar . "_" . Config("TABLE_DETAIL_TABLE"));
+    }
+
+    public function setCurrentDetailTable($v)
+    {
+        $_SESSION[PROJECT_NAME . "_" . $this->TableVar . "_" . Config("TABLE_DETAIL_TABLE")] = $v;
+    }
+
+    // Get detail url
+    public function getDetailUrl()
+    {
+        // Detail url
+        $detailUrl = "";
+        if ($this->getCurrentDetailTable() == "PASIEN_VISITATION") {
+            $detailUrl = Container("PASIEN_VISITATION")->getListUrl() . "?" . Config("TABLE_SHOW_MASTER") . "=" . $this->TableVar;
+            $detailUrl .= "&" . GetForeignKeyUrl("fk_NO_REGISTRATION", $this->NO_REGISTRATION->CurrentValue);
+        }
+        if ($detailUrl == "") {
+            $detailUrl = "CvPasienList";
+        }
+        return $detailUrl;
+    }
+
     // Table level SQL
     public function getSqlFrom() // From
     {
@@ -1206,7 +1232,11 @@ class CvPasien extends DbTable
     // Edit URL
     public function getEditUrl($parm = "")
     {
-        $url = $this->keyUrl("CvPasienEdit", $this->getUrlParm($parm));
+        if ($parm != "") {
+            $url = $this->keyUrl("CvPasienEdit", $this->getUrlParm($parm));
+        } else {
+            $url = $this->keyUrl("CvPasienEdit", $this->getUrlParm(Config("TABLE_SHOW_DETAIL") . "="));
+        }
         return $this->addMasterUrl($url);
     }
 
@@ -1220,7 +1250,11 @@ class CvPasien extends DbTable
     // Copy URL
     public function getCopyUrl($parm = "")
     {
-        $url = $this->keyUrl("CvPasienAdd", $this->getUrlParm($parm));
+        if ($parm != "") {
+            $url = $this->keyUrl("CvPasienAdd", $this->getUrlParm($parm));
+        } else {
+            $url = $this->keyUrl("CvPasienAdd", $this->getUrlParm(Config("TABLE_SHOW_DETAIL") . "="));
+        }
         return $this->addMasterUrl($url);
     }
 

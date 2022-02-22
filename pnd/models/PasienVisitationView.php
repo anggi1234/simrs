@@ -675,6 +675,9 @@ class PasienVisitationView extends PasienVisitation
         $loadCurrentRecord = false;
         $returnUrl = "";
         $matchRecord = false;
+
+        // Set up master/detail parameters
+        $this->setupMasterParms();
         if ($this->isPageRequest()) { // Validate request
             if (($keyValue = Get("IDXDAFTAR") ?? Route("IDXDAFTAR")) !== null) {
                 $this->IDXDAFTAR->setQueryStringValue($keyValue);
@@ -2428,6 +2431,70 @@ class PasienVisitationView extends PasienVisitation
         if ($this->RowType != ROWTYPE_AGGREGATEINIT) {
             $this->rowRendered();
         }
+    }
+
+    // Set up master/detail based on QueryString
+    protected function setupMasterParms()
+    {
+        $validMaster = false;
+        // Get the keys for master table
+        if (($master = Get(Config("TABLE_SHOW_MASTER"), Get(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                $validMaster = true;
+                $this->DbMasterFilter = "";
+                $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "CV_PASIEN") {
+                $validMaster = true;
+                $masterTbl = Container("CV_PASIEN");
+                if (($parm = Get("fk_NO_REGISTRATION", Get("NO_REGISTRATION"))) !== null) {
+                    $masterTbl->NO_REGISTRATION->setQueryStringValue($parm);
+                    $this->NO_REGISTRATION->setQueryStringValue($masterTbl->NO_REGISTRATION->QueryStringValue);
+                    $this->NO_REGISTRATION->setSessionValue($this->NO_REGISTRATION->QueryStringValue);
+                } else {
+                    $validMaster = false;
+                }
+            }
+        } elseif (($master = Post(Config("TABLE_SHOW_MASTER"), Post(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                    $validMaster = true;
+                    $this->DbMasterFilter = "";
+                    $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "CV_PASIEN") {
+                $validMaster = true;
+                $masterTbl = Container("CV_PASIEN");
+                if (($parm = Post("fk_NO_REGISTRATION", Post("NO_REGISTRATION"))) !== null) {
+                    $masterTbl->NO_REGISTRATION->setFormValue($parm);
+                    $this->NO_REGISTRATION->setFormValue($masterTbl->NO_REGISTRATION->FormValue);
+                    $this->NO_REGISTRATION->setSessionValue($this->NO_REGISTRATION->FormValue);
+                } else {
+                    $validMaster = false;
+                }
+            }
+        }
+        if ($validMaster) {
+            // Save current master table
+            $this->setCurrentMasterTable($masterTblVar);
+            $this->setSessionWhere($this->getDetailFilter());
+
+            // Reset start record counter (new master key)
+            if (!$this->isAddOrEdit()) {
+                $this->StartRecord = 1;
+                $this->setStartRecordNumber($this->StartRecord);
+            }
+
+            // Clear previous master key from Session
+            if ($masterTblVar != "CV_PASIEN") {
+                if ($this->NO_REGISTRATION->CurrentValue == "") {
+                    $this->NO_REGISTRATION->setSessionValue("");
+                }
+            }
+        }
+        $this->DbMasterFilter = $this->getMasterFilter(); // Get master filter
+        $this->DbDetailFilter = $this->getDetailFilter(); // Get detail filter
     }
 
     // Set up detail parms based on QueryString
